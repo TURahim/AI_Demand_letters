@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Save, Download, Send, Check, Loader2, AlertCircle, Eye, Edit3, MessageSquare, MoreVertical } from 'lucide-react'
+import { Save, Download, Send, Check, Loader2, AlertCircle, Eye, Edit3, MessageSquare, MoreVertical, ArrowLeft, Home, FileText, Layout } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -9,8 +9,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
+import { useRouter } from 'next/navigation'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 type ViewMode = 'edit' | 'preview'
@@ -40,6 +42,8 @@ export function DocumentToolbar({
   showComments,
   isSaving = false,
 }: DocumentToolbarProps) {
+  const router = useRouter()
+
   const SaveStatusIndicator = () => {
     switch (saveStatus) {
       case 'saved':
@@ -76,8 +80,42 @@ export function DocumentToolbar({
     <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border shadow-sm">
       <div className="container max-w-[1600px] mx-auto px-6 py-3">
         <div className="flex items-center justify-between gap-4">
-          {/* Left: Document Title & Status */}
+          {/* Left: Back Button, Document Title & Status */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 hover:bg-muted transition-all duration-150"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Back</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                  <Home className="w-4 h-4 mr-2" />
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/letters')}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Letters
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/documents')}>
+                  <Layout className="w-4 h-4 mr-2" />
+                  Documents
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.back()}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Go Back
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Separator orientation="vertical" className="h-6" />
+
             <h1 className="text-lg font-semibold truncate text-foreground">
               {title}
             </h1>
