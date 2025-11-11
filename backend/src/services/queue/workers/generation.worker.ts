@@ -182,9 +182,19 @@ async function processGenerationJob(
 export function startGenerationWorker(): void {
   try {
     const queue = getQueue(QUEUE_NAMES.LETTER_GENERATION);
+    let processorStarted = false;
 
     // Define the processor function
     const startProcessor = () => {
+      if (processorStarted) {
+        logger.warn('Processor already started, skipping duplicate initialization', {
+          queueName: QUEUE_NAMES.LETTER_GENERATION,
+        });
+        return;
+      }
+      
+      processorStarted = true;
+
       // Process jobs with concurrency of 2
       queue.process(2, async (job) => {
         return await processGenerationJob(job);
@@ -196,27 +206,32 @@ export function startGenerationWorker(): void {
       });
     };
 
-    // Check if Redis is already connected
-    const client = (queue as any).client;
-    if (client && client.status === 'ready') {
-      logger.info('Redis already ready, starting worker immediately', {
-        queueName: QUEUE_NAMES.LETTER_GENERATION,
-      });
-      startProcessor();
-    } else {
-      // Wait for Redis to be ready
-      logger.info('Waiting for Redis connection...', {
-        queueName: QUEUE_NAMES.LETTER_GENERATION,
-        currentStatus: client?.status || 'unknown',
-      });
-      
-      queue.on('ready', () => {
-        logger.info('Queue ready event fired, starting worker processor', {
+    // Check Redis status after a small delay to ensure connection completes
+    const checkAndStart = () => {
+      const client = (queue as any).client;
+      if (client && client.status === 'ready') {
+        logger.info('Redis is ready, starting worker processor', {
           queueName: QUEUE_NAMES.LETTER_GENERATION,
         });
         startProcessor();
+      } else {
+        logger.info('Waiting for Redis connection...', {
+          queueName: QUEUE_NAMES.LETTER_GENERATION,
+          currentStatus: client?.status || 'unknown',
+        });
+      }
+    };
+
+    // Check immediately after event loop tick
+    setImmediate(checkAndStart);
+
+    // Also listen for ready event in case connection isn't complete yet
+    queue.on('ready', () => {
+      logger.info('Queue ready event fired', {
+        queueName: QUEUE_NAMES.LETTER_GENERATION,
       });
-    }
+      startProcessor();
+    });
 
     // Handle worker-level errors
     queue.on('error', (error) => {
