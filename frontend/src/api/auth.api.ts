@@ -16,9 +16,10 @@ export interface RegisterData {
   firmName: string;
 }
 
-export interface AuthTokens {
+export interface AuthResponseData {
   accessToken: string;
   refreshToken: string;
+  user: User;
 }
 
 export interface User {
@@ -34,13 +35,13 @@ export const authApi = {
   /**
    * Login user
    */
-  async login(credentials: LoginCredentials): Promise<ApiResponse<{ tokens: AuthTokens; user: User }>> {
-    const response = await apiClient.post<{ tokens: AuthTokens; user: User }>('/auth/login', credentials);
+  async login(credentials: LoginCredentials): Promise<ApiResponse<AuthResponseData>> {
+    const response = await apiClient.post<AuthResponseData>('/auth/login', credentials);
     
-    if (response.status === 'success' && response.data.tokens) {
+    if (response.status === 'success' && response.data?.accessToken) {
       // Store token
       const { setAuthToken } = await import('./client');
-      setAuthToken(response.data.tokens.accessToken);
+      setAuthToken(response.data.accessToken);
     }
     
     return response;
@@ -49,13 +50,13 @@ export const authApi = {
   /**
    * Register new user
    */
-  async register(data: RegisterData): Promise<ApiResponse<{ tokens: AuthTokens; user: User }>> {
-    const response = await apiClient.post<{ tokens: AuthTokens; user: User }>('/auth/register', data);
+  async register(data: RegisterData): Promise<ApiResponse<AuthResponseData>> {
+    const response = await apiClient.post<AuthResponseData>('/auth/register', data);
     
-    if (response.status === 'success' && response.data.tokens) {
+    if (response.status === 'success' && response.data?.accessToken) {
       // Store token
       const { setAuthToken } = await import('./client');
-      setAuthToken(response.data.tokens.accessToken);
+      setAuthToken(response.data.accessToken);
     }
     
     return response;
@@ -84,13 +85,13 @@ export const authApi = {
   /**
    * Refresh access token
    */
-  async refreshToken(refreshToken: string): Promise<ApiResponse<{ tokens: AuthTokens }>> {
-    const response = await apiClient.post<{ tokens: AuthTokens }>('/auth/refresh', { refreshToken });
+  async refreshToken(refreshToken: string): Promise<ApiResponse<AuthResponseData>> {
+    const response = await apiClient.post<AuthResponseData>('/auth/refresh', { refreshToken });
     
-    if (response.status === 'success' && response.data.tokens) {
+    if (response.status === 'success' && response.data?.accessToken) {
       // Update stored token
       const { setAuthToken } = await import('./client');
-      setAuthToken(response.data.tokens.accessToken);
+      setAuthToken(response.data.accessToken);
     }
     
     return response;

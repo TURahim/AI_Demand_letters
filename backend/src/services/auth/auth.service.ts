@@ -1,5 +1,7 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { UserRole } from '@prisma/client';
 import config from '../../config';
 import prisma from '../../utils/prisma-client';
 import { AppError } from '../../middleware/error-handler';
@@ -50,7 +52,10 @@ export async function comparePassword(
  * Generate JWT access token
  */
 export function generateAccessToken(payload: TokenPayload): string {
-  return jwt.sign(payload, config.jwt.secret, {
+  return jwt.sign(
+    { ...payload, jti: crypto.randomUUID() },
+    config.jwt.secret,
+    {
     expiresIn: ACCESS_TOKEN_EXPIRY,
   });
 }
@@ -59,7 +64,10 @@ export function generateAccessToken(payload: TokenPayload): string {
  * Generate JWT refresh token
  */
 export function generateRefreshToken(payload: TokenPayload): string {
-  return jwt.sign(payload, config.jwt.refreshSecret, {
+  return jwt.sign(
+    { ...payload, jti: crypto.randomUUID() },
+    config.jwt.refreshSecret,
+    {
     expiresIn: REFRESH_TOKEN_EXPIRY,
   });
 }
@@ -100,7 +108,8 @@ export async function register(data: {
   password: string;
   firstName: string;
   lastName: string;
-  firmId: string;
+  firmId?: string;
+  firmName?: string;
   role?: string;
 }): Promise<AuthTokens> {
   // Check if user already exists
@@ -112,27 +121,46 @@ export async function register(data: {
     throw new AppError('User with this email already exists', 400);
   }
 
-  // Verify firm exists
-  const firm = await prisma.firm.findUnique({
-    where: { id: data.firmId },
-  });
+  let firmId = data.firmId;
 
-  if (!firm) {
-    throw new AppError('Firm not found', 404);
+  if (firmId) {
+    const firm = await prisma.firm.findUnique({
+      where: { id: firmId },
+    });
+
+    if (!firm) {
+      throw new AppError('Firm not found', 404);
+    }
+  } else {
+    if (!data.firmName) {
+      throw new AppError('Firm name is required', 400);
+    }
+
+    const newFirm = await prisma.firm.create({
+      data: {
+        name: data.firmName,
+        encryptionKey: generateEncryptionKey(),
+      },
+    });
+
+    firmId = newFirm.id;
   }
 
   // Hash password
   const passwordHash = await hashPassword(data.password);
 
   // Create user
+  const userRole: UserRole =
+    (data.role as UserRole) || (data.firmId ? UserRole.ASSOCIATE : UserRole.ADMIN);
+
   const user = await prisma.user.create({
     data: {
       email: data.email,
       passwordHash,
       firstName: data.firstName,
       lastName: data.lastName,
-      firmId: data.firmId,
-      role: (data.role as any) || 'ASSOCIATE',
+      firmId,
+      role: userRole,
     },
   });
 
@@ -178,6 +206,10 @@ export async function register(data: {
       firmId: user.firmId,
     },
   };
+}
+
+function generateEncryptionKey(): string {
+  return crypto.randomBytes(32).toString('hex');
 }
 
 /**
