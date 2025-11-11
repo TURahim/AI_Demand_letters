@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Document } from '@/src/api/documents.api'
 import { documentsApi } from '@/src/api/documents.api'
 import { DocumentCard } from './document-card'
@@ -28,7 +28,7 @@ export function DocumentList({
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const { data, loading, error, execute } = useApi(
+  const fetchDocuments = useCallback(
     () =>
       documentsApi.listDocuments({
         page,
@@ -36,8 +36,10 @@ export function DocumentList({
         status: statusFilter === 'all' ? undefined : statusFilter,
         search: searchQuery || undefined,
       }),
-    { immediate: true }
+    [page, statusFilter, searchQuery]
   )
+
+  const { data, loading, error, execute } = useApi(fetchDocuments, { immediate: true })
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this document?')) {

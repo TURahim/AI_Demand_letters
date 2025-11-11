@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useCallback } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { LetterEditor } from '@/components/editor/letter-editor'
 import { lettersApi } from '@/src/api/letters.api'
@@ -13,15 +13,14 @@ function EditorContent() {
   const searchParams = useSearchParams()
   const letterId = searchParams.get('letterId') || searchParams.get('id')
 
-  const { data, loading, error } = useApi(
-    () => {
-      if (!letterId) {
-        return Promise.resolve({ status: 'error', message: 'No letter ID provided' } as any)
-      }
-      return lettersApi.getLetter(letterId)
-    },
-    { immediate: !!letterId }
-  )
+  const fetchLetter = useCallback(() => {
+    if (!letterId) {
+      return Promise.resolve({ status: 'error', message: 'No letter ID provided' } as any)
+    }
+    return lettersApi.getLetter(letterId)
+  }, [letterId])
+
+  const { data, loading, error } = useApi(fetchLetter, { immediate: !!letterId })
 
   if (!letterId) {
     return (

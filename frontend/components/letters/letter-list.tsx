@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Letter } from '@/src/api/letters.api'
 import { lettersApi } from '@/src/api/letters.api'
 import { LetterCard } from './letter-card'
@@ -22,7 +22,7 @@ export function LetterList({ showActions = true }: LetterListProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const { data, loading, error, execute } = useApi(
+  const fetchLetters = useCallback(
     () =>
       lettersApi.listLetters({
         page,
@@ -30,8 +30,10 @@ export function LetterList({ showActions = true }: LetterListProps) {
         status: statusFilter === 'all' ? undefined : statusFilter,
         search: searchQuery || undefined,
       }),
-    { immediate: true }
+    [page, statusFilter, searchQuery]
   )
+
+  const { data, loading, error, execute } = useApi(fetchLetters, { immediate: true })
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this letter?')) {
