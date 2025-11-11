@@ -183,9 +183,21 @@ export function startGenerationWorker(): void {
   try {
     const queue = getQueue(QUEUE_NAMES.LETTER_GENERATION);
 
-    // Process jobs with concurrency of 2
-    queue.process(2, async (job) => {
-      return await processGenerationJob(job);
+    // Wait for Redis to be ready before processing
+    queue.on('ready', () => {
+      logger.info('Queue ready, starting worker processor', {
+        queueName: QUEUE_NAMES.LETTER_GENERATION,
+      });
+
+      // Process jobs with concurrency of 2
+      queue.process(2, async (job) => {
+        return await processGenerationJob(job);
+      });
+
+      logger.info('Letter generation worker started successfully', {
+        concurrency: 2,
+        queueName: QUEUE_NAMES.LETTER_GENERATION,
+      });
     });
 
     // Handle worker-level errors
@@ -196,8 +208,7 @@ export function startGenerationWorker(): void {
       });
     });
 
-    logger.info('Letter generation worker started', {
-      concurrency: 2,
+    logger.info('Letter generation worker initializing', {
       queueName: QUEUE_NAMES.LETTER_GENERATION,
     });
   } catch (error: any) {
