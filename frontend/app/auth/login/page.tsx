@@ -1,9 +1,42 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { authApi } from '@/src/api/auth.api'
+import { useMutation } from '@/src/hooks/useApi'
+import { toast } from 'sonner'
 
 export default function LoginPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
+
+  const { mutate, loading } = useMutation(authApi.login)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!email || !password) {
+      toast.error('Please fill in all fields')
+      return
+    }
+
+    const result = await mutate({ email, password })
+
+    if (result.success) {
+      toast.success('Welcome back!')
+      router.push('/dashboard')
+    } else {
+      toast.error(result.error || 'Login failed')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <Card className="w-full max-w-md border border-border">
@@ -20,22 +53,46 @@ export default function LoginPage() {
           <p className="text-muted-foreground text-sm mb-6">Sign in to your account to continue</p>
 
           {/* Form */}
-          <form className="space-y-4">
-            <div>
-              <label className="text-sm font-medium block mb-2">Email</label>
-              <Input type="email" placeholder="you@example.com" />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                required
+              />
             </div>
-            <div>
-              <label className="text-sm font-medium block mb-2">Password</label>
-              <Input type="password" placeholder="Your password" />
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                required
+              />
             </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="w-4 h-4" />
-              <span className="text-sm">Remember me</span>
-            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="remember"
+                className="w-4 h-4"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <Label htmlFor="remember" className="text-sm cursor-pointer">
+                Remember me
+              </Label>
+            </div>
 
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
-              Sign In
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
+              {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
 

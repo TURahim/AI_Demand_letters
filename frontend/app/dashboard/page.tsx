@@ -1,11 +1,20 @@
+'use client'
+
 import { AppLayout } from "@/components/layout/app-layout"
-import { StatsCard } from "@/components/stats-card"
-import { QuickActions } from "@/components/quick-actions"
-import { ActivityFeed } from "@/components/activity-feed"
-import { UsageChart } from "@/components/usage-chart"
+import { StatsCard } from "@/components/dashboard/stats-card"
+import { QuickActions } from "@/components/dashboard/quick-actions"
+import { ActivityFeed } from "@/components/dashboard/activity-feed"
+import { UsageChart } from "@/components/dashboard/usage-chart"
 import { FileText, Mail, TrendingUp } from "lucide-react"
+import { lettersApi } from '@/src/api/letters.api'
+import { useApi } from '@/src/hooks/useApi'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardPage() {
+  const { data: statsData, loading: statsLoading } = useApi(() => lettersApi.getStats())
+
+  const stats = statsData?.stats
+
   return (
     <AppLayout>
       <div className="flex-1 bg-background">
@@ -18,34 +27,44 @@ export default function DashboardPage() {
 
           {/* Stats Grid */}
           <div className="grid md:grid-cols-4 gap-4 mb-8">
-            <StatsCard
-              title="Letters Created"
-              value="48"
-              change="+12% this month"
-              icon={<FileText className="w-5 h-5" />}
-              variant="primary"
-            />
-            <StatsCard
-              title="Letters Sent"
-              value="32"
-              change="+8% this month"
-              icon={<Mail className="w-5 h-5" />}
-              variant="secondary"
-            />
-            <StatsCard
-              title="Templates"
-              value="12"
-              change="+2 this month"
-              icon={<FileText className="w-5 h-5" />}
-              variant="accent"
-            />
-            <StatsCard
-              title="Cases Closed"
-              value="8"
-              change="+3 this month"
-              icon={<TrendingUp className="w-5 h-5" />}
-              variant="primary"
-            />
+            {statsLoading ? (
+              <>
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-24 w-full" />
+                ))}
+              </>
+            ) : (
+              <>
+                <StatsCard
+                  title="Total Letters"
+                  value={stats?.total?.toString() || '0'}
+                  change={`${stats?.byStatus?.SENT || 0} sent`}
+                  icon={<FileText className="w-5 h-5" />}
+                  variant="primary"
+                />
+                <StatsCard
+                  title="This Month"
+                  value={stats?.thisMonth?.toString() || '0'}
+                  change={`${stats?.thisWeek || 0} this week`}
+                  icon={<Mail className="w-5 h-5" />}
+                  variant="secondary"
+                />
+                <StatsCard
+                  title="Draft Letters"
+                  value={stats?.byStatus?.DRAFT?.toString() || '0'}
+                  change={`${stats?.byStatus?.IN_REVIEW || 0} in review`}
+                  icon={<FileText className="w-5 h-5" />}
+                  variant="accent"
+                />
+                <StatsCard
+                  title="Approved"
+                  value={stats?.byStatus?.APPROVED?.toString() || '0'}
+                  change={`${stats?.byStatus?.SENT || 0} sent`}
+                  icon={<TrendingUp className="w-5 h-5" />}
+                  variant="primary"
+                />
+              </>
+            )}
           </div>
 
           {/* Quick Actions */}

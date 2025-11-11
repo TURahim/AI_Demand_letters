@@ -1,232 +1,227 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Bold, Italic, Underline, Type, RotateCcw, Download, Send } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Card } from "@/components/ui/card"
+import { useState, useEffect } from 'react'
+import { Bold, Italic, Underline, Type, RotateCcw, Download, Send, Save } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Card } from '@/components/ui/card'
+import { Letter } from '@/src/api/letters.api'
+import { lettersApi } from '@/src/api/letters.api'
+import { useApi, useMutation } from '@/src/hooks/useApi'
+import { toast } from 'sonner'
+import { ExportDialog } from '@/components/export/export-dialog'
 
-interface LetterVersion {
-  id: string
-  content: string
-  createdAt: Date
-  tone?: string
-  status: "draft" | "refined" | "final"
+interface LetterEditorProps {
+  letterId: string
+  letter: Letter
 }
 
-export function LetterEditor() {
-  const [content, setContent] = useState(
-    "Dear Recipient,\n\nThis letter serves as formal notice of demand for payment of the sum due and owing.\n\n[Details of Claim]\n\nPlease remit full payment within 30 days of receipt of this letter.\n\nRegards,\nYour Name",
+export function LetterEditor({ letterId, letter: initialLetter }: LetterEditorProps) {
+  const [content, setContent] = useState<string>(
+    typeof initialLetter.content === 'string'
+      ? initialLetter.content
+      : initialLetter.content?.body || ''
   )
-  const [versions, setVersions] = useState<LetterVersion[]>([
-    {
-      id: "1",
-      content: "Original draft",
-      createdAt: new Date(),
-      status: "draft",
-    },
-  ])
+  const [title, setTitle] = useState(initialLetter.title)
   const [showVersions, setShowVersions] = useState(false)
-  const [selectedVersion, setSelectedVersion] = useState<LetterVersion | null>(null)
+  const [showExportDialog, setShowExportDialog] = useState(false)
   const [refinementPanel, setRefinementPanel] = useState(true)
-  const [selectedRefine, setSelectedRefine] = useState<"tone" | "length" | "emphasis" | null>(null)
+  const [saving, setSaving] = useState(false)
 
-  const toneOptions = [
-    { id: "formal", label: "More Formal", description: "Increase legal formality" },
-    { id: "aggressive", label: "More Assertive", description: "Strengthen the demand" },
-    { id: "concise", label: "More Concise", description: "Reduce length while keeping key points" },
-  ]
+  // Load versions
+  const { data: versionsData } = useApi(() => lettersApi.getVersions(letterId))
 
-  const lengthOptions = [
-    { id: "shorter", label: "Shorter", description: "Reduce by 25%" },
-    { id: "longer", label: "Longer", description: "Add more detail" },
-  ]
+  const { mutate: updateLetter } = useMutation(lettersApi.updateLetter)
 
-  const emphasisOptions = [
-    { id: "legal", label: "Add Legal References", description: "Cite relevant statutes" },
-    { id: "consequences", label: "Emphasize Consequences", description: "Highlight legal action" },
-    { id: "deadline", label: "Tighten Deadline", description: "More urgent payment request" },
-  ]
+  useEffect(() => {
+    // Update content when letter changes
+    const letterContent =
+      typeof initialLetter.content === 'string'
+        ? initialLetter.content
+        : initialLetter.content?.body || ''
+    setContent(letterContent)
+    setTitle(initialLetter.title)
+  }, [initialLetter])
 
-  const handleApplyRefinement = (type: string) => {
-    const newVersion: LetterVersion = {
-      id: Math.random().toString(36).substr(2, 9),
-      content: content,
-      createdAt: new Date(),
-      tone: type,
-      status: "refined",
+  const handleSave = async () => {
+    setSaving(true)
+    const result = await updateLetter(letterId, {
+      title,
+      content: { body: content },
+    })
+
+    if (result.success) {
+      toast.success('Letter saved successfully')
+    } else {
+      toast.error(result.error || 'Failed to save letter')
     }
-    setVersions([...versions, newVersion])
+    setSaving(false)
   }
 
-  const saveVersion = () => {
-    const newVersion: LetterVersion = {
-      id: Math.random().toString(36).substr(2, 9),
-      content: content,
-      createdAt: new Date(),
-      status: "draft",
-    }
-    setVersions([...versions, newVersion])
+  const handleApplyRefinement = async (type: string) => {
+    // TODO: Connect to AI refinement API
+    toast.info('AI refinement feature coming soon')
   }
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date)
+  const formatDate = (date: string | Date) => {
+    const d = typeof date === 'string' ? new Date(date) : date
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(d)
   }
+
+  const versions = versionsData?.versions || []
 
   return (
-    <div className="grid md:grid-cols-[1fr_320px] gap-6">
-      {/* Main Editor */}
-      <div className="space-y-4">
-        {/* Toolbar */}
-        <Card className="p-3 bg-card border border-border flex items-center gap-1 flex-wrap">
-          <div className="flex items-center gap-1 border-r border-border pr-2">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Bold className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Italic className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Underline className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-1 border-r border-border pr-2">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Type className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-1 ml-auto">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowVersions(!showVersions)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <RotateCcw className="w-4 h-4 mr-1" />
-              Versions ({versions.length})
-            </Button>
-          </div>
-        </Card>
-
-        {/* Letter Textarea */}
-        <Textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Your demand letter..."
-          className="min-h-96 font-serif text-base leading-relaxed p-6"
-        />
-
-        {/* Action Buttons */}
-        <div className="flex gap-2 flex-wrap">
-          <Button onClick={saveVersion} variant="outline" className="gap-2 bg-transparent">
-            <RotateCcw className="w-4 h-4" />
-            Save Version
-          </Button>
-          <Button className="gap-2 bg-primary hover:bg-primary/90">
-            <Download className="w-4 h-4" />
-            Export as PDF
-          </Button>
-          <Button className="gap-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground">
-            <Send className="w-4 h-4" />
-            Send
-          </Button>
-        </div>
-      </div>
-
-      {/* Right Sidebar - Refinement Panel */}
-      {refinementPanel && (
+    <>
+      <div className="grid md:grid-cols-[1fr_320px] gap-6">
+        {/* Main Editor */}
         <div className="space-y-4">
-          <Card className="p-4 border border-border">
-            <h3 className="font-semibold mb-4">AI Refinement</h3>
+          {/* Title */}
+          <div>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-2xl font-bold w-full bg-transparent border-none outline-none focus:outline-none"
+              placeholder="Letter Title"
+            />
+          </div>
 
-            {/* Tone */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-muted-foreground">TONE</span>
-                {selectedRefine === "tone" && <span className="text-xs text-primary">Customizing...</span>}
-              </div>
-              <div className="space-y-2">
-                {toneOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => {
-                      setSelectedRefine("tone")
-                      handleApplyRefinement(opt.id)
-                    }}
-                    className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors border border-border text-sm"
-                  >
-                    <div className="font-medium">{opt.label}</div>
-                    <div className="text-xs text-muted-foreground">{opt.description}</div>
-                  </button>
-                ))}
-              </div>
+          {/* Toolbar */}
+          <Card className="p-3 bg-card border border-border flex items-center gap-1 flex-wrap">
+            <div className="flex items-center gap-1 border-r border-border pr-2">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <Bold className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <Italic className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <Underline className="w-4 h-4" />
+              </Button>
             </div>
-
-            {/* Length */}
-            <div className="mb-4 pb-4 border-t border-border pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-muted-foreground">LENGTH</span>
-              </div>
-              <div className="space-y-2">
-                {lengthOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => handleApplyRefinement(opt.id)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors border border-border text-sm"
-                  >
-                    <div className="font-medium">{opt.label}</div>
-                    <div className="text-xs text-muted-foreground">{opt.description}</div>
-                  </button>
-                ))}
-              </div>
+            <div className="flex items-center gap-1 border-r border-border pr-2">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <Type className="w-4 h-4" />
+              </Button>
             </div>
-
-            {/* Emphasis */}
-            <div className="pb-4 border-t border-border pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-muted-foreground">EMPHASIS</span>
-              </div>
-              <div className="space-y-2">
-                {emphasisOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => handleApplyRefinement(opt.id)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors border border-border text-sm"
-                  >
-                    <div className="font-medium">{opt.label}</div>
-                    <div className="text-xs text-muted-foreground">{opt.description}</div>
-                  </button>
-                ))}
-              </div>
+            <div className="flex items-center gap-1 ml-auto">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowVersions(!showVersions)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <RotateCcw className="w-4 h-4 mr-1" />
+                Versions ({versions.length})
+              </Button>
             </div>
           </Card>
 
-          {/* Version History */}
-          {showVersions && (
+          {/* Letter Textarea */}
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Your demand letter..."
+            className="min-h-96 font-serif text-base leading-relaxed p-6"
+          />
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={handleSave} variant="outline" className="gap-2" disabled={saving}>
+              <Save className="w-4 h-4" />
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+            <Button onClick={() => setShowExportDialog(true)} className="gap-2 bg-primary hover:bg-primary/90">
+              <Download className="w-4 h-4" />
+              Export
+            </Button>
+            <Button className="gap-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground">
+              <Send className="w-4 h-4" />
+              Send
+            </Button>
+          </div>
+        </div>
+
+        {/* Right Sidebar - Refinement Panel */}
+        {refinementPanel && (
+          <div className="space-y-4">
             <Card className="p-4 border border-border">
-              <h4 className="font-semibold mb-3 text-sm">Version History</h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {versions.map((version, idx) => (
+              <h3 className="font-semibold mb-4">AI Refinement</h3>
+
+              {/* Tone */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-muted-foreground">TONE</span>
+                </div>
+                <div className="space-y-2">
                   <button
-                    key={version.id}
-                    onClick={() => setSelectedVersion(version)}
-                    className="w-full text-left p-2 rounded hover:bg-muted transition-colors border border-transparent hover:border-border text-xs"
+                    onClick={() => handleApplyRefinement('formal')}
+                    className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors border border-border text-sm"
                   >
-                    <div className="font-medium">Version {idx + 1}</div>
-                    <div className="text-muted-foreground text-xs">{formatDate(version.createdAt)}</div>
-                    {version.tone && <div className="text-primary text-xs mt-1">{version.tone}</div>}
+                    <div className="font-medium">More Formal</div>
+                    <div className="text-xs text-muted-foreground">Increase legal formality</div>
                   </button>
-                ))}
+                  <button
+                    onClick={() => handleApplyRefinement('firm')}
+                    className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors border border-border text-sm"
+                  >
+                    <div className="font-medium">More Assertive</div>
+                    <div className="text-xs text-muted-foreground">Strengthen the demand</div>
+                  </button>
+                  <button
+                    onClick={() => handleApplyRefinement('conciliatory')}
+                    className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors border border-border text-sm"
+                  >
+                    <div className="font-medium">More Conciliatory</div>
+                    <div className="text-xs text-muted-foreground">Softer, more diplomatic tone</div>
+                  </button>
+                </div>
               </div>
             </Card>
-          )}
-        </div>
-      )}
-    </div>
+
+            {/* Version History */}
+            {showVersions && (
+              <Card className="p-4 border border-border">
+                <h4 className="font-semibold mb-3 text-sm">Version History</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {versions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No versions yet</p>
+                  ) : (
+                    versions.map((version, idx) => (
+                      <button
+                        key={version.id}
+                        onClick={() => {
+                          const versionContent =
+                            typeof version.content === 'string'
+                              ? version.content
+                              : version.content?.body || ''
+                          setContent(versionContent)
+                        }}
+                        className="w-full text-left p-2 rounded hover:bg-muted transition-colors border border-transparent hover:border-border text-xs"
+                      >
+                        <div className="font-medium">Version {version.version}</div>
+                        <div className="text-muted-foreground text-xs">{formatDate(version.createdAt)}</div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
+      </div>
+
+      <ExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        letterId={letterId}
+        letterTitle={title}
+      />
+    </>
   )
 }

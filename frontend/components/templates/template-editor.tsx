@@ -1,238 +1,186 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Plus, X, Copy } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
+import { useState, useEffect } from 'react'
+import { X, Save } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card } from '@/components/ui/card'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { templatesApi } from '@/src/api/templates.api'
+import { useApi, useMutation } from '@/src/hooks/useApi'
+import { toast } from 'sonner'
+import { Skeleton } from '@/components/ui/skeleton'
 
-interface Variable {
-  id: string
-  name: string
-  placeholder: string
-  required: boolean
+interface TemplateEditorProps {
+  templateId?: string | null
+  onClose: () => void
 }
 
-interface Template {
-  id: string
-  name: string
-  content: string
-  variables: Variable[]
-  createdAt: Date
-  updatedAt: Date
-}
+export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [category, setCategory] = useState('')
+  const [content, setContent] = useState('')
+  const [isPublic, setIsPublic] = useState(false)
 
-export function TemplateEditor() {
-  const [templates, setTemplates] = useState<Template[]>([
-    {
-      id: "1",
-      name: "Standard Demand Letter",
-      content:
-        "Dear {{recipientName}},\n\nThis is to formally demand payment of {{amount}} due to {{reason}}.\n\nPlease remit payment within {{days}} days.\n\nRegards,\n{{senderName}}",
-      variables: [
-        { id: "1", name: "recipientName", placeholder: "Recipient Name", required: true },
-        { id: "2", name: "amount", placeholder: "Amount Due", required: true },
-        { id: "3", name: "reason", placeholder: "Reason for Demand", required: true },
-        { id: "4", name: "days", placeholder: "Days to Pay", required: true },
-        { id: "5", name: "senderName", placeholder: "Your Name", required: true },
-      ],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+  const { data: templateData, loading } = useApi(
+    () => {
+      if (!templateId) return Promise.resolve(null)
+      return templatesApi.getTemplate(templateId)
     },
-  ])
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(templates[0])
-  const [editingContent, setEditingContent] = useState(templates[0].content)
-  const [newVarName, setNewVarName] = useState("")
-  const [newVarPlaceholder, setNewVarPlaceholder] = useState("")
+    { immediate: !!templateId }
+  )
 
-  const handleAddVariable = () => {
-    if (!newVarName) return
-    const newVar: Variable = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newVarName,
-      placeholder: newVarPlaceholder || newVarName,
-      required: true,
+  const { mutate: createTemplate } = useMutation(templatesApi.createTemplate)
+  const { mutate: updateTemplate } = useMutation(templatesApi.updateTemplate)
+
+  useEffect(() => {
+    if (templateData?.template) {
+      const template = templateData.template
+      setName(template.name)
+      setDescription(template.description || '')
+      setCategory(template.category || '')
+      setContent(typeof template.content === 'string' ? template.content : JSON.stringify(template.content))
+      setIsPublic(template.isPublic)
     }
-    if (selectedTemplate) {
-      const updated = {
-        ...selectedTemplate,
-        variables: [...selectedTemplate.variables, newVar],
-        updatedAt: new Date(),
+  }, [templateData])
+
+  const handleSave = async () => {
+    if (!name || !content) {
+      toast.error('Name and content are required')
+      return
+    }
+
+    const templateData = {
+      name,
+      description: description || undefined,
+      category: category || undefined,
+      content: content, // Store as string for now
+      isPublic,
+    }
+
+    if (templateId) {
+      // Update existing
+      const result = await updateTemplate(templateId, templateData)
+      if (result.success) {
+        toast.success('Template updated successfully')
+        onClose()
+      } else {
+        toast.error(result.error || 'Failed to update template')
       }
-      setSelectedTemplate(updated)
-      setTemplates(templates.map((t) => (t.id === updated.id ? updated : t)))
-    }
-    setNewVarName("")
-    setNewVarPlaceholder("")
-  }
-
-  const handleRemoveVariable = (varId: string) => {
-    if (selectedTemplate) {
-      const updated = {
-        ...selectedTemplate,
-        variables: selectedTemplate.variables.filter((v) => v.id !== varId),
-        updatedAt: new Date(),
+    } else {
+      // Create new
+      const result = await createTemplate(templateData)
+      if (result.success) {
+        toast.success('Template created successfully')
+        onClose()
+      } else {
+        toast.error(result.error || 'Failed to create template')
       }
-      setSelectedTemplate(updated)
-      setTemplates(templates.map((t) => (t.id === updated.id ? updated : t)))
     }
   }
 
-  const handleCreateTemplate = () => {
-    const newTemplate: Template = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: "New Template",
-      content: "",
-      variables: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    setTemplates([...templates, newTemplate])
-    setSelectedTemplate(newTemplate)
-    setEditingContent("")
-  }
-
-  const handleUpdateContent = (content: string) => {
-    setEditingContent(content)
-    if (selectedTemplate) {
-      const updated = {
-        ...selectedTemplate,
-        content,
-        updatedAt: new Date(),
-      }
-      setSelectedTemplate(updated)
-      setTemplates(templates.map((t) => (t.id === updated.id ? updated : t)))
-    }
-  }
-
-  const handleCloneTemplate = (template: Template) => {
-    const cloned: Template = {
-      ...template,
-      id: Math.random().toString(36).substr(2, 9),
-      name: `${template.name} (Copy)`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    setTemplates([...templates, cloned])
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
   }
 
   return (
-    <div className="grid md:grid-cols-[250px_1fr] gap-6">
-      {/* Templates List */}
-      <div className="space-y-2">
-        <Button onClick={handleCreateTemplate} className="w-full gap-2 bg-primary hover:bg-primary/90">
-          <Plus className="w-4 h-4" />
-          New Template
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">{templateId ? 'Edit Template' : 'New Template'}</h2>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          <X className="w-4 h-4" />
         </Button>
-        {templates.map((template) => (
-          <button
-            key={template.id}
-            onClick={() => {
-              setSelectedTemplate(template)
-              setEditingContent(template.content)
-            }}
-            className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              selectedTemplate?.id === template.id ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"
-            }`}
-          >
-            <div className="truncate">{template.name}</div>
-            <div className="text-xs opacity-75">{template.variables.length} variables</div>
-          </button>
-        ))}
       </div>
 
-      {/* Editor */}
-      {selectedTemplate && (
-        <div className="space-y-6">
-          <div>
-            <label className="text-sm font-semibold block mb-2">Template Name</label>
-            <Input
-              value={selectedTemplate.name}
-              onChange={(e) => {
-                const updated = { ...selectedTemplate, name: e.target.value }
-                setSelectedTemplate(updated)
-                setTemplates(templates.map((t) => (t.id === updated.id ? updated : t)))
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-semibold block mb-2">Content</label>
-            <Textarea
-              value={editingContent}
-              onChange={(e) => handleUpdateContent(e.target.value)}
-              placeholder="Enter your template content. Use {{variableName}} for dynamic fields."
-              className="min-h-64 font-mono"
-            />
-            <p className="text-xs text-muted-foreground mt-2">
-              Tip: Wrap variable names in double curly braces, e.g. {"{{recipientName}}}"}
-            </p>
-          </div>
-
-          {/* Variables Panel */}
-          <Card className="p-4 border border-border">
-            <h3 className="font-semibold mb-4">Template Variables</h3>
-            <div className="space-y-3 mb-4">
-              {selectedTemplate.variables.map((variable) => (
-                <div key={variable.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-mono text-sm">
-                      {"{{"}
-                      {variable.name}
-                      {"}}"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{variable.placeholder}</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveVariable(variable.id)}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            {/* Add Variable Form */}
-            <div className="space-y-2 pt-4 border-t border-border">
-              <Input
-                placeholder="Variable name (e.g., recipientName)"
-                value={newVarName}
-                onChange={(e) => setNewVarName(e.target.value)}
-                className="text-sm"
-              />
-              <Input
-                placeholder="Placeholder text (optional)"
-                value={newVarPlaceholder}
-                onChange={(e) => setNewVarPlaceholder(e.target.value)}
-                className="text-sm"
-              />
-              <Button onClick={handleAddVariable} className="w-full gap-2 bg-accent hover:bg-accent/90">
-                <Plus className="w-4 h-4" />
-                Add Variable
-              </Button>
-            </div>
-          </Card>
-
-          {/* Preview */}
-          <Card className="p-4 border border-border bg-muted">
-            <h3 className="font-semibold mb-3">Preview</h3>
-            <div className="whitespace-pre-wrap text-sm font-mono text-muted-foreground bg-background p-4 rounded border border-border overflow-auto max-h-48">
-              {editingContent}
-            </div>
-          </Card>
-
-          <div className="flex gap-2">
-            <Button onClick={() => handleCloneTemplate(selectedTemplate)} variant="outline" className="gap-2">
-              <Copy className="w-4 h-4" />
-              Clone
-            </Button>
-          </div>
+      {/* Form */}
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="name">Template Name *</Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., Standard Demand Letter"
+            required
+          />
         </div>
-      )}
+
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Brief description of this template"
+            rows={2}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="category">Category</Label>
+          <Input
+            id="category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="e.g., Personal Injury, Contract"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="content">Content *</Label>
+          <Textarea
+            id="content"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Enter your template content. Use {{variableName}} for dynamic fields."
+            className="min-h-64 font-mono"
+            required
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            Tip: Wrap variable names in double curly braces, e.g. {'{{recipientName}}'}
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="isPublic"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <Label htmlFor="isPublic" className="cursor-pointer">
+            Make this template public (visible to all firms)
+          </Label>
+        </div>
+      </div>
+
+      {/* Preview */}
+      <Card className="p-4 border border-border bg-muted">
+        <h3 className="font-semibold mb-3">Preview</h3>
+        <div className="whitespace-pre-wrap text-sm font-mono text-muted-foreground bg-background p-4 rounded border border-border overflow-auto max-h-48">
+          {content || 'Enter content to see preview...'}
+        </div>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} className="gap-2 bg-primary hover:bg-primary/90">
+          <Save className="w-4 h-4" />
+          {templateId ? 'Update Template' : 'Create Template'}
+        </Button>
+      </div>
     </div>
   )
 }

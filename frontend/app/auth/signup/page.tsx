@@ -1,9 +1,67 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { authApi } from '@/src/api/auth.api'
+import { useMutation } from '@/src/hooks/useApi'
+import { toast } from 'sonner'
 
 export default function SignupPage() {
+  const router = useRouter()
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [firmName, setFirmName] = useState('')
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
+
+  const { mutate, loading } = useMutation(authApi.register)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!firstName || !lastName || !email || !password || !firmName) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match')
+      return
+    }
+
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters')
+      return
+    }
+
+    if (!agreedToTerms) {
+      toast.error('Please agree to the Terms of Service')
+      return
+    }
+
+    const result = await mutate({
+      email,
+      password,
+      firstName,
+      lastName,
+      firmName,
+    })
+
+    if (result.success) {
+      toast.success('Account created successfully!')
+      router.push('/dashboard')
+    } else {
+      toast.error(result.error || 'Registration failed')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <Card className="w-full max-w-md border border-border">
@@ -20,30 +78,95 @@ export default function SignupPage() {
           <p className="text-muted-foreground text-sm mb-6">Join legal professionals saving hours every week</p>
 
           {/* Form */}
-          <form className="space-y-4">
-            <div>
-              <label className="text-sm font-medium block mb-2">Full Name</label>
-              <Input type="text" placeholder="Your name" />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                type="text"
+                placeholder="John"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                disabled={loading}
+                required
+              />
             </div>
-            <div>
-              <label className="text-sm font-medium block mb-2">Email</label>
-              <Input type="email" placeholder="you@example.com" />
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                placeholder="Doe"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                disabled={loading}
+                required
+              />
             </div>
-            <div>
-              <label className="text-sm font-medium block mb-2">Password</label>
-              <Input type="password" placeholder="Create a password" />
+            <div className="space-y-2">
+              <Label htmlFor="firmName">Law Firm Name</Label>
+              <Input
+                id="firmName"
+                type="text"
+                placeholder="Smith & Associates"
+                value={firmName}
+                onChange={(e) => setFirmName(e.target.value)}
+                disabled={loading}
+                required
+              />
             </div>
-            <div>
-              <label className="text-sm font-medium block mb-2">Confirm Password</label>
-              <Input type="password" placeholder="Confirm password" />
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                required
+              />
             </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="w-4 h-4" />
-              <span className="text-sm">I agree to the Terms of Service and Privacy Policy</span>
-            </label>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Create a password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                required
+                minLength={8}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+                required
+              />
+            </div>
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="terms"
+                className="w-4 h-4 mt-1"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+              />
+              <Label htmlFor="terms" className="text-sm cursor-pointer">
+                I agree to the Terms of Service and Privacy Policy
+              </Label>
+            </div>
 
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
-              Create Account
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={loading}>
+              {loading ? 'Creating account...' : 'Create Account'}
             </Button>
           </form>
 

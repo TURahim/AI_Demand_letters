@@ -1,7 +1,7 @@
 import { AppLayout } from "@/components/layout/app-layout"
 import { Card } from "@/components/ui/card"
-import { StatsCard } from "@/components/stats-card"
-import { UsageChart } from "@/components/usage-chart"
+import { StatsCard } from "@/components/dashboard/stats-card"
+import { UsageChart } from "@/components/dashboard/usage-chart"
 import { TrendingUp, Calendar, Activity } from "lucide-react"
 
 export default function AnalyticsPage() {

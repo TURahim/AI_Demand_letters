@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/app-layout"
-import { DocumentUpload } from "@/components/document-upload"
+import { DocumentUpload } from "@/components/upload/document-upload"
 
 export default function UploadPage() {
   return (

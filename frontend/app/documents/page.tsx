@@ -1,5 +1,7 @@
+'use client'
+
 import { AppLayout } from "@/components/layout/app-layout"
-import { DocumentUpload } from "@/components/document-upload"
+import { DocumentList } from "@/components/documents/document-list"
 import { Button } from "@/components/ui/button"
 import { Upload } from "lucide-react"
 import Link from "next/link"
@@ -23,8 +25,8 @@ export default function DocumentsPage() {
             </Link>
           </div>
 
-          {/* Document Upload Component */}
-          <DocumentUpload />
+          {/* Document List Component */}
+          <DocumentList showActions={true} />
         </div>
       </div>
     </AppLayout>

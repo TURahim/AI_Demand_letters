@@ -1,5 +1,7 @@
+'use client'
+
 import { AppLayout } from "@/components/layout/app-layout"
-import { TemplateEditor } from "@/components/template-editor"
+import { TemplateList } from "@/components/templates/template-list"
 
 export default function TemplatesPage() {
   return (
@@ -12,8 +14,8 @@ export default function TemplatesPage() {
             <p className="text-muted-foreground">Create and manage demand letter templates with dynamic variables</p>
           </div>
 
-          {/* Template Editor */}
-          <TemplateEditor />
+          {/* Template List */}
+          <TemplateList />
         </div>
       </div>
     </AppLayout>

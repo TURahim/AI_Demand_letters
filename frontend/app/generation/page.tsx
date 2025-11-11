@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/app-layout"
-import { GenerationWizard } from "@/components/generation-wizard"
+import { GenerationWizard } from "@/components/generation/generation-wizard"
 
 export default function GenerationPage() {
   return (
