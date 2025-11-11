@@ -4,12 +4,17 @@ import logger from './utils/logger';
 import prisma from './utils/prisma-client';
 import { initializeErrorReporting } from './services/monitoring/error-reporter';
 import { startMetricsCollection } from './services/monitoring/metrics.service';
+import { startGenerationWorker } from './services/queue/workers/generation.worker';
+import { closeAllQueues } from './services/queue/queue.service';
 
 // Initialize error reporting
 initializeErrorReporting();
 
 // Start metrics collection
 startMetricsCollection();
+
+// Start background workers
+startGenerationWorker();
 
 // Start server
 const server = app.listen(config.port, () => {
@@ -29,6 +34,10 @@ const gracefulShutdown = async (signal: string) => {
     logger.info('HTTP server closed');
 
     try {
+      // Close queues
+      await closeAllQueues();
+      logger.info('Background queues closed');
+
       // Disconnect from database
       await prisma.$disconnect();
       logger.info('Database connection closed');
