@@ -128,3 +128,20 @@ export const getLetterStats = asyncHandler(async (req: Request, res: Response) =
   });
 });
 
+/**
+ * Get document IDs associated with a letter
+ * GET /api/v1/letters/:id/documents
+ */
+export const getLetterDocuments = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const firmId = req.user!.firmId;
+
+  const documentIds = await letterService.getLetterDocumentIds(id, firmId);
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Letter documents retrieved successfully',
+    data: { documentIds },
+  });
+});
+

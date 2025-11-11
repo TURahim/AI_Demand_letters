@@ -110,7 +110,8 @@ model Document {
   firm              Firm           @relation(fields: [firmId], references: [id], onDelete: Cascade)
   uploader          User           @relation(fields: [uploadedBy], references: [id])
   processingJobs    ProcessingJob[]
-  letters           Letter[]
+  letters           Letter[]       // Legacy 1:1 relationship (deprecated)
+  letterDocuments   LetterDocument[] // Many-to-many relationship
 
   @@index([firmId])
   @@index([uploadedBy])
@@ -199,7 +200,7 @@ model Letter {
   id                String         @id @default(uuid())
   firmId            String         @map("firm_id")
   createdBy         String         @map("created_by")
-  documentId        String?        @map("document_id")
+  documentId        String?        @map("document_id") // Legacy field (deprecated, use sourceDocuments instead)
   templateId        String?        @map("template_id")
   title             String
   content           Json           // Rich text content (TipTap JSON)
@@ -216,8 +217,9 @@ model Letter {
   // Relations
   firm              Firm           @relation(fields: [firmId], references: [id], onDelete: Cascade)
   creator           User           @relation(fields: [createdBy], references: [id])
-  document          Document?      @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  document          Document?      @relation(fields: [documentId], references: [id], onDelete: SetNull) // Legacy
   template          Template?      @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sourceDocuments   LetterDocument[] // Many-to-many relationship with documents
   collaborations    Collaboration[]
   versions          LetterVersion[]
   exports           LetterExport[]
@@ -277,6 +279,28 @@ enum ExportFormat {
   PDF
   DOCX
   HTML
+}
+
+// ============================================
+// Letter-Document Join Table (Many-to-Many)
+// ============================================
+
+model LetterDocument {
+  id                String   @id @default(uuid())
+  letterId          String   @map("letter_id")
+  documentId        String   @map("document_id")
+  order             Int      @default(0) // Preserve upload/selection order
+  role              String?  // e.g., "primary", "supporting", "evidence"
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  letter            Letter   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([letterId, documentId])
+  @@index([letterId])
+  @@index([documentId])
+  @@map("letter_documents")
 }
 
 // ============================================

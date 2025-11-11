@@ -72,5 +72,15 @@ router.get(
   letterController.getLetterVersions
 );
 
+/**
+ * GET /api/v1/letters/:id/documents
+ * Get document IDs associated with a letter
+ */
+router.get(
+  '/:id/documents',
+  authorize(UserRole.ADMIN, UserRole.PARTNER, UserRole.ASSOCIATE, UserRole.PARALEGAL),
+  letterController.getLetterDocuments
+);
+
 export default router;
 

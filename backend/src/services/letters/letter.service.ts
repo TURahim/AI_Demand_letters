@@ -117,6 +117,23 @@ export async function getLetterById(
           createdAt: true,
         },
       },
+      sourceDocuments: {
+        include: {
+          document: {
+            select: {
+              id: true,
+              fileName: true,
+              mimeType: true,
+              fileSize: true,
+              extractedText: true,
+              createdAt: true,
+            },
+          },
+        },
+        orderBy: {
+          order: 'asc',
+        },
+      },
       _count: {
         select: {
           versions: true,
@@ -211,6 +228,20 @@ export async function listLetters(
             id: true,
             firstName: true,
             lastName: true,
+          },
+        },
+        sourceDocuments: {
+          include: {
+            document: {
+              select: {
+                id: true,
+                fileName: true,
+                mimeType: true,
+              },
+            },
+          },
+          orderBy: {
+            order: 'asc',
           },
         },
         _count: {
@@ -363,7 +394,7 @@ export async function deleteLetter(
 }
 
 /**
- * Link documents to letter
+ * Link documents to letter (supports multiple documents via join table)
  */
 export async function linkDocumentsToLetter(
   letterId: string,
@@ -389,20 +420,82 @@ export async function linkDocumentsToLetter(
     return;
   }
 
-  // As the current schema supports a single document reference,
-  // use the first document provided.
+  // Remove existing document links for this letter
+  await prisma.letterDocument.deleteMany({
+    where: { letterId },
+  });
+
+  // Create new document links in order
+  const letterDocuments = documentIds.map((docId, index) => ({
+    letterId,
+    documentId: docId,
+    order: index,
+    role: index === 0 ? 'primary' : 'supporting', // First doc is primary
+  }));
+
+  await prisma.letterDocument.createMany({
+    data: letterDocuments,
+  });
+
+  // Also update the legacy documentId field for backwards compatibility
   await prisma.letter.update({
     where: { id: letterId },
     data: {
-      documentId: documents[0].id,
+      documentId: documents[0].id, // Keep the primary document in legacy field
     },
   });
 
   logger.info('Documents linked to letter', {
     letterId,
     documentCount: documents.length,
+    primaryDocumentId: documents[0].id,
     firmId,
   });
+}
+
+/**
+ * Get all document IDs associated with a letter
+ * (Handles both legacy documentId field and new many-to-many relationship)
+ */
+export async function getLetterDocumentIds(
+  letterId: string,
+  firmId: string
+): Promise<string[]> {
+  const letter = await prisma.letter.findUnique({
+    where: { id: letterId },
+    select: {
+      firmId: true,
+      documentId: true,
+      sourceDocuments: {
+        select: {
+          documentId: true,
+        },
+        orderBy: {
+          order: 'asc',
+        },
+      },
+    },
+  });
+
+  if (!letter) {
+    throw new AppError('Letter not found', 404);
+  }
+
+  if (letter.firmId !== firmId) {
+    throw new AppError('Access denied', 403);
+  }
+
+  // Prefer the new many-to-many relationship
+  if (letter.sourceDocuments && letter.sourceDocuments.length > 0) {
+    return letter.sourceDocuments.map((ld) => ld.documentId);
+  }
+
+  // Fallback to legacy documentId field
+  if (letter.documentId) {
+    return [letter.documentId];
+  }
+
+  return [];
 }
 
 /**
