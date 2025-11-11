@@ -85,6 +85,27 @@ router.get(
 );
 
 /**
+ * PATCH /api/v1/letters/:id/autosave
+ * Auto-save letter (debounced)
+ */
+router.patch(
+  '/:id/autosave',
+  authorize(UserRole.ADMIN, UserRole.PARTNER, UserRole.ASSOCIATE),
+  letterController.autoSaveLetter
+);
+
+/**
+ * POST /api/v1/letters/:id/save
+ * Force save letter (immediate)
+ */
+router.post(
+  '/:id/save',
+  authorize(UserRole.ADMIN, UserRole.PARTNER, UserRole.ASSOCIATE),
+  auditMiddleware(AUDITED_ACTIONS.LETTER_UPDATE, 'Letter'),
+  letterController.forceSaveLetter
+);
+
+/**
  * Comment routes for letters
  */
 

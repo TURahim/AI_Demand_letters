@@ -3,7 +3,9 @@ import * as letterService from './letter.service';
 import * as versionService from './version.service';
 import { updateLetterSchema } from './letter.validation';
 import { asyncHandler } from '../../middleware/async-handler';
+import { autoSaveService } from './autosave.service';
 import logger from '../../utils/logger';
+import { z } from 'zod';
 
 /**
  * List letters
@@ -142,6 +144,66 @@ export const getLetterDocuments = asyncHandler(async (req: Request, res: Respons
     status: 'success',
     message: 'Letter documents retrieved successfully',
     data: { documentIds },
+  });
+});
+
+// Auto-save validation schema
+const autoSaveSchema = z.object({
+  content: z.any().optional(),
+  title: z.string().optional(),
+  metadata: z.any().optional(),
+});
+
+/**
+ * Auto-save letter (debounced)
+ * PATCH /api/v1/letters/:id/autosave
+ */
+export const autoSaveLetter = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user!.id;
+
+  const validatedData = autoSaveSchema.parse(req.body);
+
+  // Schedule the save (debounced)
+  await autoSaveService.scheduleSave(id, userId, validatedData, {
+    createVersion: false, // Auto-saves don't create versions
+  });
+
+  res.status(202).json({
+    status: 'success',
+    message: 'Auto-save scheduled',
+    data: {
+      letterId: id,
+      hasPendingChanges: autoSaveService.hasPendingChanges(id),
+    },
+  });
+});
+
+/**
+ * Force save letter (immediate, no debounce)
+ * POST /api/v1/letters/:id/save
+ */
+export const forceSaveLetter = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user!.id;
+
+  const validatedData = autoSaveSchema.parse(req.body);
+
+  // If there are pending changes, force save them first
+  if (autoSaveService.hasPendingChanges(id)) {
+    await autoSaveService.forceSave(id, userId, { createVersion: false });
+  }
+
+  // Then apply the new changes with version creation
+  await autoSaveService.scheduleSave(id, userId, validatedData, {
+    createVersion: true, // Manual saves create versions
+  });
+  await autoSaveService.forceSave(id, userId, { createVersion: true });
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Letter saved successfully',
+    data: { letterId: id },
   });
 });
 

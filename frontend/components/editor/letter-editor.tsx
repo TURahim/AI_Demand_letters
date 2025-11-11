@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Bold, Italic, Underline, Type, RotateCcw, Download, Send, Save } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Bold, Italic, Underline, Type, RotateCcw, Download, Send, Save, Check, Loader2, AlertCircle, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
@@ -10,13 +10,17 @@ import { lettersApi } from '@/src/api/letters.api'
 import { useApi, useMutation } from '@/src/hooks/useApi'
 import { toast } from 'sonner'
 import { ExportDialog } from '@/components/export/export-dialog'
+import { CommentsSidebar } from './comments-sidebar'
 
 interface LetterEditorProps {
   letterId: string
   letter: Letter
+  currentUserId?: string
 }
 
-export function LetterEditor({ letterId, letter: initialLetter }: LetterEditorProps) {
+type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
+
+export function LetterEditor({ letterId, letter: initialLetter, currentUserId }: LetterEditorProps) {
   const [content, setContent] = useState<string>(
     typeof initialLetter.content === 'string'
       ? initialLetter.content
@@ -25,8 +29,14 @@ export function LetterEditor({ letterId, letter: initialLetter }: LetterEditorPr
   const [title, setTitle] = useState(initialLetter.title)
   const [showVersions, setShowVersions] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
+  const [showComments, setShowComments] = useState(true)
   const [refinementPanel, setRefinementPanel] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+  
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const lastSavedContentRef = useRef<string>(content)
+  const lastSavedTitleRef = useRef<string>(title)
 
   // Load versions
   const { data: versionsData } = useApi(() => lettersApi.getVersions(letterId))
@@ -41,7 +51,55 @@ export function LetterEditor({ letterId, letter: initialLetter }: LetterEditorPr
         : initialLetter.content?.body || ''
     setContent(letterContent)
     setTitle(initialLetter.title)
+    lastSavedContentRef.current = letterContent
+    lastSavedTitleRef.current = initialLetter.title
   }, [initialLetter])
+
+  // Auto-save effect
+  useEffect(() => {
+    // Check if content or title has changed
+    const hasChanges = 
+      content !== lastSavedContentRef.current || 
+      title !== lastSavedTitleRef.current;
+
+    if (!hasChanges) {
+      return;
+    }
+
+    // Mark as unsaved
+    setSaveStatus('unsaved');
+
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // Schedule auto-save (2 seconds debounce)
+    autoSaveTimerRef.current = setTimeout(async () => {
+      setSaveStatus('saving');
+      
+      const result = await updateLetter(letterId, {
+        title,
+        content: { body: content },
+      });
+
+      if (result.success) {
+        setSaveStatus('saved');
+        lastSavedContentRef.current = content;
+        lastSavedTitleRef.current = title;
+      } else {
+        setSaveStatus('error');
+        console.error('Auto-save failed:', result.error);
+      }
+    }, 2000);
+
+    // Cleanup on unmount
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [content, title, letterId, updateLetter])
 
   const handleSave = async () => {
     setSaving(true)
@@ -75,13 +133,54 @@ export function LetterEditor({ letterId, letter: initialLetter }: LetterEditorPr
 
   const versions = versionsData?.versions || []
 
+  // Save status indicator component
+  const SaveStatusIndicator = () => {
+    switch (saveStatus) {
+      case 'saved':
+        return (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Check className="w-3 h-3" />
+            <span>Saved</span>
+          </div>
+        );
+      case 'saving':
+        return (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            <span>Saving...</span>
+          </div>
+        );
+      case 'unsaved':
+        return (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span>Unsaved changes</span>
+          </div>
+        );
+      case 'error':
+        return (
+          <div className="flex items-center gap-1 text-xs text-destructive">
+            <AlertCircle className="w-3 h-3" />
+            <span>Save failed</span>
+          </div>
+        );
+    }
+  };
+
   return (
     <>
-      <div className="grid md:grid-cols-[1fr_320px] gap-6">
+      <div className={`grid gap-6 ${
+        showComments && refinementPanel 
+          ? 'md:grid-cols-[1fr_320px_320px]' 
+          : showComments 
+          ? 'md:grid-cols-[1fr_320px]'
+          : refinementPanel
+          ? 'md:grid-cols-[1fr_320px]'
+          : ''
+      }`}>
         {/* Main Editor */}
         <div className="space-y-4">
           {/* Title */}
-          <div>
+          <div className="flex items-center justify-between gap-4">
             <input
               type="text"
               value={title}
@@ -89,6 +188,7 @@ export function LetterEditor({ letterId, letter: initialLetter }: LetterEditorPr
               className="text-2xl font-bold w-full bg-transparent border-none outline-none focus:outline-none"
               placeholder="Letter Title"
             />
+            <SaveStatusIndicator />
           </div>
 
           {/* Toolbar */}
@@ -118,6 +218,15 @@ export function LetterEditor({ letterId, letter: initialLetter }: LetterEditorPr
               >
                 <RotateCcw className="w-4 h-4 mr-1" />
                 Versions ({versions.length})
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowComments(!showComments)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <MessageSquare className="w-4 h-4 mr-1" />
+                Comments
               </Button>
             </div>
           </Card>
@@ -212,6 +321,15 @@ export function LetterEditor({ letterId, letter: initialLetter }: LetterEditorPr
                 </div>
               </Card>
             )}
+          </div>
+        )}
+
+        {/* Comments Sidebar */}
+        {showComments && (
+          <div className="space-y-4">
+            <Card className="p-4 border border-border sticky top-4">
+              <CommentsSidebar letterId={letterId} currentUserId={currentUserId} />
+            </Card>
           </div>
         )}
       </div>

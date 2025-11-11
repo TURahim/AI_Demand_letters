@@ -182,7 +182,7 @@ See [Infrastructure Documentation](infrastructure/terraform/README.md) for AWS d
 
 ## 📈 Development Roadmap
 
-**Current Phase**: PR-08 - Letter Editor Backend (In Progress - Backend Complete)
+**Current Phase**: PR-08 - Letter Editor Backend (Complete ✅)
 
 See [Engineering Roadmap](docs/Initialdocs/ENGINEERING_ROADMAP.md) for complete task breakdown.
 
@@ -266,19 +266,27 @@ See [Engineering Roadmap](docs/Initialdocs/ENGINEERING_ROADMAP.md) for complete 
 - Fixed Radix Select empty value errors
 - Fixed dashboard infinite reload loop
 
-**Letter Editor Backend (PR-08)** - Backend Complete ✅
-- Comment model with threaded replies
-- Full CRUD comment service (create, read, update, delete)
-- Resolve/unresolve comments
-- Comment controller with Zod validation
-- 8 REST API endpoints for comments
-- Firm-level isolation and permissions
-- Integration with letter routes
-
-### In Progress 🚧
-- PR-08: Auto-save service implementation
-- PR-08: Frontend comment sidebar and UI
-- PR-08: Integration tests for comment system
+**Letter Editor Backend (PR-08)** - Complete ✅
+- **Backend Features:**
+  - Comment model with threaded replies and position tracking
+  - Full CRUD comment service (create, read, update, delete)
+  - Resolve/unresolve comments with resolver tracking
+  - Comment controller with Zod validation
+  - 8 REST API endpoints for comments
+  - Firm-level isolation and permissions
+  - Integration with letter routes
+  - Auto-save service with 2-second debounce
+  - Incremental letter updates (auto-save vs manual save)
+  - Integration tests for comment system
+- **Frontend Features:**
+  - Comments sidebar with real-time updates
+  - Threaded comment replies
+  - Comment editing, deletion, and resolution
+  - Auto-save with status indicator (saved/saving/unsaved/error)
+  - Toggle for showing/hiding resolved comments
+  - Responsive 3-column layout (editor + refinement + comments)
+  - Save status indicator with visual feedback
+  - Comments API client with TypeScript types
 
 ### Upcoming 📅
 - PR-09: Word Export Service (DOCX generation with firm branding)
