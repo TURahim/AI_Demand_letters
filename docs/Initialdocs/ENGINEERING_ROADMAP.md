@@ -333,12 +333,12 @@ POST   /api/templates/:id/clone — Clone template
 ---
 
 ## PR-06: Letter Generation Engine
-**Complexity**: High | **Days**: 7-9 | **Dependencies**: PR-03, PR-04, PR-05 | **Status**: 🚧 READY TO START
+**Complexity**: High | **Days**: 7-9 | **Dependencies**: PR-03, PR-04, PR-05 | **Status**: 🚧 IN PROGRESS
 
 ### Objectives
 Orchestrate end-to-end letter generation with AI.
 
-**Next Step**: PR-04 ✅ Complete! Ready to implement generation orchestration, letter CRUD, versioning, and background jobs.
+**Progress**: Queue infrastructure, letter CRUD, versioning, and generation endpoints implemented. End-to-end testing & retry workflow pending.
 
 ### Tasks
 
