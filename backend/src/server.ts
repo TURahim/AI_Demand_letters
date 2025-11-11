@@ -6,6 +6,8 @@ import { initializeErrorReporting } from './services/monitoring/error-reporter';
 import { startMetricsCollection } from './services/monitoring/metrics.service';
 import { startGenerationWorker } from './services/queue/workers/generation.worker';
 import { closeAllQueues } from './services/queue/queue.service';
+import { setupWebSocketServer, shutdownWebSocketServer } from './services/websocket/ws-server';
+import { shutdown as shutdownYjsProvider } from './services/collaboration/yjs-provider';
 
 // Initialize error reporting
 initializeErrorReporting();
@@ -25,6 +27,9 @@ const server = app.listen(config.port, () => {
   });
 });
 
+// Setup WebSocket server
+const wss = setupWebSocketServer(server);
+
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
   logger.info(`${signal} received, starting graceful shutdown`);
@@ -34,6 +39,14 @@ const gracefulShutdown = async (signal: string) => {
     logger.info('HTTP server closed');
 
     try {
+      // Close WebSocket server
+      shutdownWebSocketServer(wss);
+      logger.info('WebSocket server closed');
+
+      // Shutdown Yjs provider
+      await shutdownYjsProvider();
+      logger.info('Yjs provider closed');
+
       // Close queues (may fail if Redis was never connected)
       try {
         await closeAllQueues();
