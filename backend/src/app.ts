@@ -14,6 +14,7 @@ import firmRoutes from './services/firms/firm.routes';
 import uploadRoutes from './services/upload/upload.routes';
 import documentRoutes from './services/documents/document.routes';
 import templateRoutes from './services/templates/template.routes';
+import aiRoutes from './services/ai/ai.routes';
 
 // Create Express app
 const app: Application = express();
@@ -75,6 +76,7 @@ app.use(`/api/${config.apiVersion}/firms`, firmRoutes);
 app.use(`/api/${config.apiVersion}/upload`, uploadRoutes);
 app.use(`/api/${config.apiVersion}/documents`, documentRoutes);
 app.use(`/api/${config.apiVersion}/templates`, templateRoutes);
+app.use(`/api/${config.apiVersion}/ai`, aiRoutes);
 
 // TODO: Add remaining route modules
 // app.use(`/api/${config.apiVersion}/letters`, lettersRoutes);

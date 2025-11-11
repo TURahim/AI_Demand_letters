@@ -1,0 +1,52 @@
+Generate a professional demand letter based on the following information:
+
+## Case Information
+{{caseInfo}}
+
+## Client Information
+- Name: {{clientName}}
+- Contact: {{clientContact}}
+
+## Opposing Party Information
+- Name: {{defendantName}}
+- Address: {{defendantAddress}}
+
+## Template Instructions
+{{templateInstructions}}
+
+## Supporting Documents Summary
+{{documentsSummary}}
+
+## Damages
+{{damagesBreakdown}}
+
+## Special Instructions
+{{specialInstructions}}
+
+---
+
+Please generate a complete demand letter that:
+
+1. **Opens professionally** with proper formatting (date, addresses, RE: line, salutation)
+
+2. **Establishes the facts** clearly and chronologically based on the case information provided
+
+3. **Details the injuries/damages** with specific amounts and supporting documentation references
+
+4. **Establishes liability** with clear causal connections between the defendant's actions and the client's damages
+
+5. **Presents the demand** with a specific settlement amount and reasonable deadline for response
+
+6. **Maintains professional tone** throughout - firm and assertive but respectful
+
+7. **Closes appropriately** with professional language and next steps if demand is not met
+
+8. **Follows the template structure** if provided, while adapting content to fit the specific case
+
+Important:
+- Base everything strictly on the information provided
+- Do not fabricate facts or make assumptions
+- Use professional legal language appropriate for formal correspondence
+- Include all damage calculations with clear itemization
+- Cite specific dates, amounts, and facts from the documents
+- Format as a complete, ready-to-send business letter

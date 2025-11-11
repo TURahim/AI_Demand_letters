@@ -1,0 +1,43 @@
+Refine and improve the following demand letter draft based on the provided feedback and instructions.
+
+## Original Draft
+{{originalDraft}}
+
+## Refinement Instructions
+{{refinementInstructions}}
+
+## Specific Changes Requested
+{{specificChanges}}
+
+## Additional Context (if any)
+{{additionalContext}}
+
+---
+
+Please refine the draft by:
+
+1. **Addressing all feedback** provided in the refinement instructions
+
+2. **Making requested changes** while maintaining consistency with the original facts
+
+3. **Improving clarity** where language is ambiguous or unclear
+
+4. **Strengthening arguments** that could be more persuasive
+
+5. **Fixing any errors** in grammar, spelling, formatting, or legal terminology
+
+6. **Maintaining professional tone** throughout all revisions
+
+7. **Preserving accuracy** - do not change factual information unless explicitly requested and justified
+
+8. **Enhancing flow** and logical progression of arguments
+
+Guidelines for refinement:
+- If changes to damages are requested, ensure calculations remain accurate
+- If tone adjustments are requested, maintain professionalism
+- If additional information is added, integrate it smoothly
+- If sections need strengthening, add persuasive language without exaggeration
+- If formatting improvements are needed, follow standard business letter conventions
+- Preserve all accurate dates, names, and specific facts from the original
+
+Output the complete refined letter, not just the changes. The output should be ready to use as-is.

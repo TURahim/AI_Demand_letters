@@ -1,0 +1,63 @@
+Adjust the tone of the following demand letter to match the requested style while preserving all factual content.
+
+## Current Draft
+{{currentDraft}}
+
+## Requested Tone
+{{requestedTone}}
+
+## Tone Guidelines
+{{toneGuidelines}}
+
+---
+
+## Tone Options and Characteristics:
+
+### Professional/Formal (Default)
+- Standard business letter language
+- Respectful but firm
+- Objective presentation of facts
+- Appropriate for most demand letters
+
+### Assertive/Firm
+- Stronger language emphasizing liability
+- More direct statements about consequences
+- Confident tone about the strength of the case
+- Useful when liability is clear and damages are substantial
+
+### Diplomatic/Conciliatory
+- Softer language focused on resolution
+- Emphasis on mutual benefit of settlement
+- Less confrontational phrasing
+- Appropriate when maintaining relationship is important
+
+### Urgent/Pressing
+- Emphasis on time-sensitivity
+- Stronger language about deadlines
+- More explicit about next steps if demand unmet
+- Appropriate for statute of limitations concerns or pressing damages
+
+---
+
+Please adjust the tone by:
+
+1. **Modifying language** to match the requested style while keeping facts intact
+
+2. **Adjusting word choice** to be more/less assertive as requested
+
+3. **Changing emphasis** on different aspects (liability vs. damages vs. resolution)
+
+4. **Altering sentence structure** to create the desired tone (shorter/direct vs. longer/diplomatic)
+
+5. **Maintaining professionalism** regardless of tone - never become unprofessional or threatening
+
+6. **Preserving all facts** - dates, amounts, names, and specific claims must remain accurate
+
+7. **Keeping legal accuracy** - legal claims and arguments must remain sound
+
+Important:
+- Do not change factual content or damage amounts
+- Maintain logical structure and organization
+- Ensure all legal points remain valid
+- Keep appropriate business letter formatting
+- Output the complete adjusted letter
