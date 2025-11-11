@@ -35,6 +35,8 @@ model User {
   sessions          Session[]
   auditLogs         AuditLog[]
   collaborations    Collaboration[]
+  comments          Comment[]         @relation("CommentAuthor")
+  resolvedComments  Comment[]         @relation("CommentResolver")
 
   @@index([firmId])
   @@index([email])
@@ -223,6 +225,7 @@ model Letter {
   collaborations    Collaboration[]
   versions          LetterVersion[]
   exports           LetterExport[]
+  comments          Comment[]
 
   @@index([firmId])
   @@index([createdBy])
@@ -331,6 +334,37 @@ enum CollaborationRole {
   EDITOR
   COMMENTER
   VIEWER
+}
+
+// ============================================
+// Comments
+// ============================================
+
+model Comment {
+  id                String        @id @default(uuid())
+  letterId          String        @map("letter_id")
+  userId            String        @map("user_id")
+  parentId          String?       @map("parent_id") // For threaded comments
+  content           String        @db.Text
+  position          Json?         // Position in document (e.g., { line: 10, column: 5 })
+  isResolved        Boolean       @default(false) @map("is_resolved")
+  resolvedBy        String?       @map("resolved_by")
+  resolvedAt        DateTime?     @map("resolved_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  letter            Letter        @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  user              User          @relation("CommentAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  resolver          User?         @relation("CommentResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  parent            Comment?      @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies           Comment[]     @relation("CommentThread")
+
+  @@index([letterId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([isResolved])
+  @@map("comments")
 }
 
 // ============================================

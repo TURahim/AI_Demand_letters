@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { UserRole } from '@prisma/client';
 import * as letterController from './letter.controller';
+import { commentController } from '../comments/comment.controller';
 import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/authorize';
 import { auditMiddleware, AUDITED_ACTIONS } from '../../middleware/audit-logger';
+import { asyncHandler } from '../../middleware/async-handler';
 
 const router = Router();
 
@@ -80,6 +82,40 @@ router.get(
   '/:id/documents',
   authorize(UserRole.ADMIN, UserRole.PARTNER, UserRole.ASSOCIATE, UserRole.PARALEGAL),
   letterController.getLetterDocuments
+);
+
+/**
+ * Comment routes for letters
+ */
+
+/**
+ * POST /api/v1/letters/:letterId/comments
+ * Create a comment on a letter
+ */
+router.post(
+  '/:letterId/comments',
+  authorize(UserRole.ADMIN, UserRole.PARTNER, UserRole.ASSOCIATE, UserRole.PARALEGAL),
+  asyncHandler(commentController.createComment.bind(commentController))
+);
+
+/**
+ * GET /api/v1/letters/:letterId/comments
+ * Get all comments for a letter
+ */
+router.get(
+  '/:letterId/comments',
+  authorize(UserRole.ADMIN, UserRole.PARTNER, UserRole.ASSOCIATE, UserRole.PARALEGAL),
+  asyncHandler(commentController.getComments.bind(commentController))
+);
+
+/**
+ * GET /api/v1/letters/:letterId/comments/count
+ * Get comment count for a letter
+ */
+router.get(
+  '/:letterId/comments/count',
+  authorize(UserRole.ADMIN, UserRole.PARTNER, UserRole.ASSOCIATE, UserRole.PARALEGAL),
+  asyncHandler(commentController.getCommentCount.bind(commentController))
 );
 
 export default router;
