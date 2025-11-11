@@ -45,16 +45,13 @@ AWS_SECRET_ACCESS_KEY=your-actual-secret-key-here
 
 Replace `your-aws-access-key` and `your-aws-secret-key` with your actual AWS credentials.
 
-### 3. Enable Bedrock Access
+### 3. Bedrock Model Access (Automatic)
 
-1. **Log in to AWS Console**
-2. **Navigate to Bedrock** (search for "Bedrock" in the AWS Console)
-3. **Enable Model Access**:
-   - Go to "Model access" in the left sidebar
-   - Click "Manage model access"
-   - Enable "Claude 3.5 Sonnet v2"
-   - Click "Save changes"
-   - Wait for access to be granted (usually takes a few seconds)
+✅ **Good news**: AWS has retired the manual "Model access" page. All serverless foundation models are now **automatically enabled** for your AWS account.
+
+You no longer need to manually request or enable model access. Simply use the model ID and your credentials will work!
+
+**No action needed** - proceed to step 4.
 
 ### 4. Verify IAM Permissions
 
@@ -154,12 +151,12 @@ For development, use the `us.` prefix. For production in Europe, use the `eu.` p
 
 ### Error: "Access to AI model denied"
 
-**Cause**: IAM permissions or model access not enabled
+**Cause**: IAM permissions missing (model access is automatic now)
 
 **Solution**:
-1. Enable model access in Bedrock Console (see step 3 above)
-2. Verify IAM permissions (see step 4 above)
-3. Wait a few minutes for permissions to propagate
+1. Verify your IAM user has `bedrock:InvokeModel` permission
+2. Attach `AmazonBedrockFullAccess` policy to your IAM user for development
+3. Ensure your AWS credentials (`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`) are correct in `.env`
 
 ### Error: "Invalid request to AI service"
 
@@ -201,19 +198,25 @@ For 1,000 letters per month: ~$17/month in AI costs.
 
 After updating your `.env` file:
 
-1. **Restart the backend server**:
+1. **Verify IAM Permissions**:
+   - Log into AWS Console
+   - Go to IAM → Users → Select your user
+   - Click "Add permissions" → "Attach policies directly"
+   - Search for and attach `AmazonBedrockFullAccess` (development) or create a custom policy (production)
+
+2. **Restart the backend server**:
    ```bash
    cd backend
    pnpm run dev
    ```
 
-2. **Run the test script** (in a new terminal):
+3. **Run the test script** (in a new terminal):
    ```bash
    cd backend
    npx ts-node src/tests/bedrock-test.ts
    ```
 
-3. **Try generating a letter** in the UI:
+4. **Try generating a letter** in the UI:
    - Navigate to "Generate Demand Letter"
    - Fill in all required fields
    - Click "Generate"
@@ -224,12 +227,21 @@ After updating your `.env` file:
 If you continue to have issues:
 1. Check the backend logs for detailed error messages
 2. Run the test script and share the output
-3. Verify your AWS account has Bedrock enabled in your region
-4. Consider switching to a different model (e.g., Claude 3 Haiku for lower cost testing)
+3. Verify your AWS IAM user has Bedrock permissions attached
+4. Check that your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are correct
+5. Consider switching to a different model (e.g., Claude 3 Haiku for lower cost testing)
+
+## Key Points
+
+- ✅ Model access is automatic (no manual enabling needed)
+- ✅ All Bedrock serverless models are enabled by default
+- ⚠️ Only requirement: IAM permissions on your user
+- ✅ Use inference profile ID format: `us.anthropic.claude-3-5-sonnet-20241022-v2:0`
 
 ---
 
 **Updated**: November 11, 2024  
 **Model**: Claude 3.5 Sonnet v2  
-**Region**: us-east-1
+**Region**: us-east-1  
+**Model Access Status**: Automatic (retired manual page)
 
