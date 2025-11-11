@@ -23,7 +23,7 @@ export type ApiResponse<T = any> = ApiSuccess<T> | ApiError;
 /**
  * Get auth token from localStorage
  */
-function getAuthToken(): string | null {
+export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('auth_token');
 }
