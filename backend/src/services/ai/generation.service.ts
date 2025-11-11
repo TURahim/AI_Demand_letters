@@ -30,16 +30,17 @@ export async function generateDemandLetter(input: {
   clientName: string;
   clientContact?: string;
   defendantName: string;
-  defendantAddress: string;
+  defendantAddress?: string;
 
   // Damages
-  damages: {
+  damages?: {
     medical?: number;
     lostWages?: number;
     propertyDamage?: number;
     painAndSuffering?: number;
     other?: Record<string, number>;
     itemizedMedical?: Array<{ description: string; amount: number }>;
+    notes?: string;
   };
 
   // Supporting documents
@@ -75,7 +76,6 @@ export async function generateDemandLetter(input: {
       'incidentDescription',
       'clientName',
       'defendantName',
-      'defendantAddress',
     ]);
 
     if (!validation.valid) {
@@ -106,7 +106,8 @@ export async function generateDemandLetter(input: {
     });
 
     // Build damages breakdown
-    const damagesBreakdown = buildDamagesBreakdown(input.damages);
+    const damagesData = input.damages || {};
+    const damagesBreakdown = buildDamagesBreakdown(damagesData);
 
     // Build party information
     const clientInfo = buildPartyInfo({

@@ -14,7 +14,7 @@ export const startGenerationSchema = z.object({
   clientName: z.string().min(1, 'Client name is required'),
   clientContact: z.string().optional(),
   defendantName: z.string().min(1, 'Defendant name is required'),
-  defendantAddress: z.string().min(1, 'Defendant address is required'),
+  defendantAddress: z.string().min(1, 'Defendant address is required').optional(),
 
   // Damages
   damages: z.object({
@@ -27,7 +27,8 @@ export const startGenerationSchema = z.object({
       description: z.string(),
       amount: z.number().min(0),
     })).optional(),
-  }),
+    notes: z.string().optional(),
+  }).optional().default({}),
 
   // Supporting documents
   documentIds: z.array(z.string()).optional(),
@@ -43,7 +44,7 @@ export const startGenerationSchema = z.object({
 
   // Customization
   specialInstructions: z.string().optional(),
-  tone: z.enum(['professional', 'assertive', 'diplomatic', 'urgent']).optional(),
+  tone: z.enum(['professional', 'firm', 'conciliatory', 'assertive', 'diplomatic', 'urgent']).optional(),
   temperature: z.number().min(0).max(1).optional(),
   maxTokens: z.number().min(100).max(4096).optional(),
 });

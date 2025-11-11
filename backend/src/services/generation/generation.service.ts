@@ -22,16 +22,17 @@ export async function startLetterGeneration(input: {
   clientName: string;
   clientContact?: string;
   defendantName: string;
-  defendantAddress: string;
+  defendantAddress?: string;
 
   // Damages
-  damages: {
+  damages?: {
     medical?: number;
     lostWages?: number;
     propertyDamage?: number;
     painAndSuffering?: number;
     other?: Record<string, number>;
     itemizedMedical?: Array<{ description: string; amount: number }>;
+    notes?: string;
   };
 
   // Supporting documents
@@ -81,6 +82,9 @@ export async function startLetterGeneration(input: {
     }
 
     // Create letter record in PENDING status
+    const defendantAddress = input.defendantAddress || 'Address not provided';
+    const damages = input.damages || {};
+
     const letter = await letterService.createLetter({
       firmId: input.firmId,
       createdBy: input.userId,
@@ -88,7 +92,7 @@ export async function startLetterGeneration(input: {
       title: input.title || `Demand Letter - ${input.defendantName}`,
       content: { body: '' }, // Will be filled by generation job
       recipientName: input.recipientName || input.defendantName,
-      recipientAddress: input.recipientAddress || input.defendantAddress,
+      recipientAddress: input.recipientAddress || defendantAddress,
       caseReference: input.caseReference,
       metadata: {
         caseType: input.caseType,
@@ -118,8 +122,8 @@ export async function startLetterGeneration(input: {
       clientName: input.clientName,
       clientContact: input.clientContact,
       defendantName: input.defendantName,
-      defendantAddress: input.defendantAddress,
-      damages: input.damages,
+      defendantAddress,
+      damages,
       documentIds: input.documentIds,
       templateId: input.templateId,
       templateContent,

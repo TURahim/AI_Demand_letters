@@ -27,6 +27,9 @@ async function processGenerationJob(
     await job.progress(10);
 
     // Generate the demand letter using AI
+    const damages = job.data.damages || {};
+    const defendantAddress = job.data.defendantAddress || 'Address not provided';
+
     const aiResult = await generationService.generateDemandLetter({
       caseType: job.data.caseType,
       incidentDate: job.data.incidentDate,
@@ -35,8 +38,8 @@ async function processGenerationJob(
       clientName: job.data.clientName,
       clientContact: job.data.clientContact,
       defendantName: job.data.defendantName,
-      defendantAddress: job.data.defendantAddress,
-      damages: job.data.damages,
+      defendantAddress,
+      damages,
       documentIds: job.data.documentIds,
       firmId: job.data.firmId,
       templateContent: job.data.templateContent,

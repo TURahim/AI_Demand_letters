@@ -95,7 +95,7 @@ export async function refineLetter(input: {
  */
 export async function adjustTone(input: {
   currentDraft: string;
-  requestedTone: 'professional' | 'assertive' | 'diplomatic' | 'urgent';
+  requestedTone: 'professional' | 'firm' | 'conciliatory' | 'assertive' | 'diplomatic' | 'urgent';
   toneGuidelines?: string;
   temperature?: number;
   maxTokens?: number;
@@ -182,6 +182,12 @@ function getToneGuidelines(tone: string): string {
     professional:
       'Use standard formal business language. Be respectful, objective, and clear. Maintain a balanced tone suitable for most legal correspondence.',
     
+    firm:
+      'Use confident, assertive language that clearly states the client’s position and expectations. Maintain professionalism while emphasizing accountability and consequences.',
+
+    conciliatory:
+      'Use cooperative, solution-focused language that encourages resolution. Emphasize shared interests, mutual respect, and opportunities to resolve the matter amicably.',
+
     assertive:
       'Use confident, direct language that emphasizes the strength of the case and the clarity of liability. Be firm about deadlines and consequences while remaining professional.',
     

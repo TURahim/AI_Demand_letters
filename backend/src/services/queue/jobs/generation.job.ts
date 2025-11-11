@@ -17,16 +17,17 @@ export interface LetterGenerationJobData {
   clientName: string;
   clientContact?: string;
   defendantName: string;
-  defendantAddress: string;
+  defendantAddress?: string;
 
   // Damages
-  damages: {
+  damages?: {
     medical?: number;
     lostWages?: number;
     propertyDamage?: number;
     painAndSuffering?: number;
     other?: Record<string, number>;
     itemizedMedical?: Array<{ description: string; amount: number }>;
+    notes?: string;
   };
 
   // Supporting documents
