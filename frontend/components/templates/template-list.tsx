@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Template } from '@/src/api/templates.api'
 import { templatesApi } from '@/src/api/templates.api'
 import { useApi, useMutation } from '@/src/hooks/useApi'
@@ -19,10 +19,12 @@ export function TemplateList() {
   const [showEditor, setShowEditor] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const { data, loading, execute } = useApi(
+  const fetchTemplates = useCallback(
     () => templatesApi.listTemplates({ search: searchQuery || undefined }),
-    { immediate: true }
+    [searchQuery]
   )
+
+  const { data, loading, execute } = useApi(fetchTemplates, { immediate: true })
 
   const { mutate: deleteTemplate } = useMutation(templatesApi.deleteTemplate)
   const { mutate: cloneTemplate } = useMutation(templatesApi.cloneTemplate)
