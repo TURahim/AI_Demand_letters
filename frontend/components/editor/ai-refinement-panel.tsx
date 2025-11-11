@@ -48,28 +48,24 @@ export function AIRefinementPanel({
       id: 'formal',
       title: 'More Formal',
       description: 'Increase legal formality',
-      icon: '⚖️',
       color: 'text-blue-600',
     },
     {
       id: 'assertive',
       title: 'More Assertive',
       description: 'Strengthen the demand',
-      icon: '💪',
       color: 'text-amber-600',
     },
     {
       id: 'conciliatory',
       title: 'More Conciliatory',
       description: 'Softer, diplomatic tone',
-      icon: '🤝',
       color: 'text-emerald-600',
     },
     {
       id: 'professional',
       title: 'More Professional',
       description: 'Business-appropriate language',
-      icon: '👔',
       color: 'text-purple-600',
     },
   ]
@@ -121,7 +117,6 @@ export function AIRefinementPanel({
                   <Card className="border border-border hover:border-[#7848DF] hover:shadow-md transition-all duration-150 cursor-pointer">
                     <CardContent className="p-3">
                       <div className="flex items-start gap-3">
-                        <span className="text-xl">{option.icon}</span>
                         <div className="flex-1 min-w-0 text-left">
                           <div className="font-medium text-sm text-foreground mb-0.5">
                             {option.title}
