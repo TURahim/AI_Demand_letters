@@ -13,7 +13,9 @@ export default function Home() {
             </div>
             <span className="font-bold text-lg">Steno</span>
           </Link>
-          <Button size="sm">Sign In</Button>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/auth/login">Sign In</Link>
+          </Button>
         </div>
       </header>
 
@@ -29,18 +31,18 @@ export default function Home() {
             templates and refinement tools.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-primary hover:bg-primary/90">
-              Get Started
+            <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
+              <Link href="/auth/signup">Get Started</Link>
             </Button>
-            <Button size="lg" variant="outline">
-              Learn More
+            <Button size="lg" variant="outline" asChild>
+              <Link href="#features">Learn More</Link>
             </Button>
           </div>
         </div>
       </section>
 
       {/* Features */}
-      <section className="py-20 px-4">
+      <section id="features" className="py-20 px-4">
         <div className="container max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold mb-12 text-center">Why Choose Steno</h2>
           <div className="grid md:grid-cols-3 gap-8">
@@ -68,8 +70,8 @@ export default function Home() {
           <p className="text-secondary-foreground/80 mb-8">
             Join legal professionals saving hours every week with Steno.
           </p>
-          <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            Start Free Trial
+          <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
+            <Link href="/auth/signup">Start Free Trial</Link>
           </Button>
         </div>
       </section>
