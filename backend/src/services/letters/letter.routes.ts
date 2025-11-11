@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { UserRole } from '@prisma/client';
 import * as letterController from './letter.controller';
 import { commentController } from '../comments/comment.controller';
+import * as exportController from '../export/export.controller';
 import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/authorize';
 import { auditMiddleware, AUDITED_ACTIONS } from '../../middleware/audit-logger';
@@ -103,6 +104,31 @@ router.post(
   authorize(UserRole.ADMIN, UserRole.PARTNER, UserRole.ASSOCIATE),
   auditMiddleware(AUDITED_ACTIONS.LETTER_UPDATE, 'Letter'),
   letterController.forceSaveLetter
+);
+
+/**
+ * Export routes for letters
+ */
+
+/**
+ * POST /api/v1/letters/:letterId/export
+ * Generate export for a letter
+ */
+router.post(
+  '/:letterId/export',
+  authorize(UserRole.ADMIN, UserRole.PARTNER, UserRole.ASSOCIATE),
+  auditMiddleware(AUDITED_ACTIONS.LETTER_EXPORT, 'Letter'),
+  exportController.generateExport
+);
+
+/**
+ * GET /api/v1/letters/:letterId/exports
+ * List exports for a letter
+ */
+router.get(
+  '/:letterId/exports',
+  authorize(UserRole.ADMIN, UserRole.PARTNER, UserRole.ASSOCIATE, UserRole.PARALEGAL),
+  exportController.listExports
 );
 
 /**

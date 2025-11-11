@@ -304,8 +304,31 @@ See [Engineering Roadmap](docs/Initialdocs/ENGINEERING_ROADMAP.md) for complete 
   - Eliminated infinite render loops on /generation page
 - **All builds passing:** Backend TypeScript ✅ | Frontend Next.js ✅
 
+**Word Export Service (PR-09)** - Complete ✅
+- **Backend Features:**
+  - Export service with DOCX generation using `docx` package
+  - Configurable export options (header, footer, firm branding)
+  - S3 integration for export file storage with firm isolation
+  - Presigned download URLs (1-hour expiration)
+  - Export tracking (download count, file size)
+  - Automatic cleanup of expired exports (7-day retention)
+  - 4 REST API endpoints for export management
+  - Audit logging for export actions
+- **Frontend Features:**
+  - Enhanced export dialog with options checkboxes
+  - Format selection (DOCX ready, PDF/HTML coming soon)
+  - Real-time export with progress indicator
+  - Automatic file download after generation
+  - Export API client with TypeScript types
+  - Integrated export button in letter editor
+- **Document Formatting:**
+  - Professional heading styles (H1, H2)
+  - Proper paragraph spacing and line height
+  - Standard 1-inch margins
+  - Auto-detection of headings
+  - Optional header/footer with branding
+
 ### Upcoming 📅
-- PR-09: Word Export Service (DOCX generation with firm branding)
 - PR-10: Real-time Collaboration (Optional - Yjs/TipTap for Google Docs-style editing)
 - PR-11: Analytics & Dashboard (usage metrics, firm-wide statistics)
 - PR-12: Testing Suite (comprehensive E2E coverage, 80%+ code coverage)
