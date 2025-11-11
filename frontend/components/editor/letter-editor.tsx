@@ -39,7 +39,8 @@ export function LetterEditor({ letterId, letter: initialLetter, currentUserId }:
   const lastSavedTitleRef = useRef<string>(title)
 
   // Load versions
-  const { data: versionsData } = useApi(() => lettersApi.getVersions(letterId))
+  const fetchVersions = useCallback(() => lettersApi.getVersions(letterId), [letterId])
+  const { data: versionsData } = useApi(fetchVersions)
 
   const { mutate: updateLetter } = useMutation(lettersApi.updateLetter)
 
