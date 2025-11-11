@@ -28,12 +28,22 @@ export default function LoginPage() {
     }
 
     const result = await mutate({ email, password })
+    console.debug('Login result', result)
 
     if (result.success) {
       toast.success('Welcome back!')
       router.push('/dashboard')
+      setTimeout(() => {
+        window.location.href = '/dashboard'
+      }, 150)
     } else {
-      toast.error(result.error || 'Login failed')
+      const errorMessage =
+        result.error ||
+        result.errors?.[0]?.message ||
+        (Array.isArray(result.errors) && result.errors.length > 0
+          ? result.errors.map((err) => err.message).join(', ')
+          : 'Login failed')
+      toast.error(errorMessage)
     }
   }
 
