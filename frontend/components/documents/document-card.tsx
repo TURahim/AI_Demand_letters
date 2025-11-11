@@ -58,9 +58,11 @@ export function DocumentCard({
             <div className="mt-1">
               <FileText className="w-5 h-5 text-muted-foreground" />
             </div>
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-base truncate">{document.fileName}</CardTitle>
-              <div className="flex items-center gap-2 mt-1">
+            <div className="flex-1 min-w-0 max-w-full">
+              <CardTitle className="text-base break-words line-clamp-2">
+                {document.fileName}
+              </CardTitle>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <Badge className={getStatusColor(document.status)} variant="outline">
                   {document.status}
                 </Badge>
