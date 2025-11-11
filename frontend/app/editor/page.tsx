@@ -1,13 +1,12 @@
 'use client'
 
 import { Suspense, useCallback } from 'react'
-import { AppLayout } from '@/components/layout/app-layout'
-import { LetterEditor } from '@/components/editor/letter-editor'
+import { DocumentViewer, DocumentViewerEmptyState } from '@/components/editor/document-viewer'
 import { lettersApi } from '@/src/api/letters.api'
 import { useApi } from '@/src/hooks/useApi'
 import { Skeleton } from '@/components/ui/skeleton'
-import { toast } from 'sonner'
 import { useSearchParams } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 
 function EditorContent() {
   const searchParams = useSearchParams()
@@ -23,76 +22,53 @@ function EditorContent() {
   const { data, loading, error } = useApi(fetchLetter, { immediate: !!letterId })
 
   if (!letterId) {
-    return (
-      <AppLayout>
-        <div className="flex-1 bg-background">
-          <div className="container max-w-7xl mx-auto px-6 py-8">
-            <div className="text-center py-12">
-              <h1 className="text-2xl font-bold mb-2">No Letter Selected</h1>
-              <p className="text-muted-foreground">Please select a letter to edit or generate a new one.</p>
-            </div>
-          </div>
-        </div>
-      </AppLayout>
-    )
+    return <DocumentViewerEmptyState />
   }
 
   if (loading) {
     return (
-      <AppLayout>
-        <div className="flex-1 bg-background">
-          <div className="container max-w-7xl mx-auto px-6 py-8">
-            <Skeleton className="h-8 w-64 mb-4" />
-            <Skeleton className="h-96 w-full" />
-          </div>
+      <div className="h-screen flex items-center justify-center bg-[#FAFAF8]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#A18050] mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Loading document...</p>
         </div>
-      </AppLayout>
+      </div>
     )
   }
 
   if (error || !data?.letter) {
     return (
-      <AppLayout>
-        <div className="flex-1 bg-background">
-          <div className="container max-w-7xl mx-auto px-6 py-8">
-            <div className="text-center py-12">
-              <h1 className="text-2xl font-bold mb-2">Letter Not Found</h1>
-              <p className="text-muted-foreground">{error || 'The letter you are looking for does not exist.'}</p>
-            </div>
-          </div>
+      <div className="h-screen flex items-center justify-center bg-[#FAFAF8]">
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="text-5xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold mb-3 text-foreground">Letter Not Found</h2>
+          <p className="text-muted-foreground mb-6">
+            {error || 'The letter you are looking for does not exist or you do not have access to it.'}
+          </p>
+          <button
+            onClick={() => window.location.href = '/letters'}
+            className="px-4 py-2 bg-[#A18050] text-white rounded-lg hover:bg-[#8F6F42] transition-colors"
+          >
+            Back to Letters
+          </button>
         </div>
-      </AppLayout>
+      </div>
     )
   }
 
-  return (
-    <AppLayout>
-      <div className="flex-1 bg-background">
-        <div className="container max-w-7xl mx-auto px-6 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">{data.letter.title}</h1>
-            <p className="text-muted-foreground">Refine your demand letter with AI-powered suggestions</p>
-          </div>
-
-          <LetterEditor letterId={letterId} letter={data.letter} />
-        </div>
-      </div>
-    </AppLayout>
-  )
+  return <DocumentViewer letterId={letterId} letter={data.letter} />
 }
 
 export default function EditorPage() {
   return (
     <Suspense
       fallback={
-        <AppLayout>
-          <div className="flex-1 bg-background">
-            <div className="container max-w-7xl mx-auto px-6 py-8">
-              <Skeleton className="h-8 w-64 mb-4" />
-              <Skeleton className="h-96 w-full" />
-            </div>
+        <div className="h-screen flex items-center justify-center bg-[#FAFAF8]">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-[#A18050] mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground">Loading document...</p>
           </div>
-        </AppLayout>
+        </div>
       }
     >
       <EditorContent />
