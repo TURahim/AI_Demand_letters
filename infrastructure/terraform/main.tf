@@ -126,9 +126,6 @@ module "api_gateway" {
 
 module "cloudwatch" {
   source = "./modules/cloudwatch"
-
-  app_name    = local.app_name
-  environment = var.environment
 }
 
 # Outputs
