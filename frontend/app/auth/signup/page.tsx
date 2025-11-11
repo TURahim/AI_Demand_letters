@@ -58,7 +58,14 @@ export default function SignupPage() {
       toast.success('Account created successfully!')
       router.push('/dashboard')
     } else {
-      toast.error(result.error || 'Registration failed')
+      const errorMessage =
+        result.error ||
+        result.errors?.[0]?.message ||
+        (Array.isArray(result.errors) && result.errors.length > 0
+          ? result.errors.map((err) => err.message).join(', ')
+          : 'Registration failed')
+
+      toast.error(errorMessage)
     }
   }
 
