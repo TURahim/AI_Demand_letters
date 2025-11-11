@@ -16,34 +16,41 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string>('')
 
   const { mutate, loading } = useMutation(authApi.login)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErrorMessage('') // Clear previous errors
 
     if (!email || !password) {
-      toast.error('Please fill in all fields')
+      const msg = 'Please fill in all fields'
+      setErrorMessage(msg)
+      toast.error(msg)
       return
     }
 
     const result = await mutate({ email, password })
-    console.debug('Login result', result)
+    console.log('Login result:', result)
 
     if (result.success) {
       toast.success('Welcome back!')
-      router.push('/dashboard')
-      setTimeout(() => {
-        window.location.href = '/dashboard'
-      }, 150)
+      console.log('Redirecting to /dashboard...')
+      
+      // Use window.location for more reliable navigation
+      window.location.href = '/dashboard'
     } else {
-      const errorMessage =
+      const msg =
         result.error ||
         result.errors?.[0]?.message ||
         (Array.isArray(result.errors) && result.errors.length > 0
           ? result.errors.map((err) => err.message).join(', ')
           : 'Login failed')
-      toast.error(errorMessage)
+      
+      console.error('Login error:', msg)
+      setErrorMessage(msg)
+      toast.error(msg)
     }
   }
 
@@ -61,6 +68,13 @@ export default function LoginPage() {
 
           <h1 className="text-2xl font-bold mb-2">Welcome Back</h1>
           <p className="text-muted-foreground text-sm mb-6">Sign in to your account to continue</p>
+
+          {/* Error Alert */}
+          {errorMessage && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive font-medium">{errorMessage}</p>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">

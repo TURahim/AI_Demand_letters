@@ -87,10 +87,17 @@ class ApiClient {
 
     if (!response.ok) {
       // Handle 401 Unauthorized - clear token and redirect to login
+      // BUT: don't redirect if we're already on login/signup pages (to avoid reload that clears error toasts)
       if (response.status === 401) {
         removeAuthToken();
         if (typeof window !== 'undefined') {
-          window.location.href = '/auth/login';
+          const currentPath = window.location.pathname;
+          const isAuthPage = currentPath.startsWith('/auth/login') || currentPath.startsWith('/auth/signup');
+          
+          // Only redirect if we're NOT already on an auth page
+          if (!isAuthPage) {
+            window.location.href = '/auth/login';
+          }
         }
       }
 

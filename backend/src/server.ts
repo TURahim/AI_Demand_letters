@@ -34,9 +34,15 @@ const gracefulShutdown = async (signal: string) => {
     logger.info('HTTP server closed');
 
     try {
-      // Close queues
-      await closeAllQueues();
-      logger.info('Background queues closed');
+      // Close queues (may fail if Redis was never connected)
+      try {
+        await closeAllQueues();
+        logger.info('Background queues closed');
+      } catch (queueError: any) {
+        logger.warn('Error closing queues (Redis may not be connected):', {
+          error: queueError.message,
+        });
+      }
 
       // Disconnect from database
       await prisma.$disconnect();
@@ -69,7 +75,10 @@ process.on('uncaughtException', (error) => {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled rejection at:', promise, 'reason:', reason);
+  logger.error('Unhandled promise rejection:', {
+    reason: reason instanceof Error ? reason.stack : reason,
+    promise: String(promise),
+  });
   gracefulShutdown('unhandledRejection');
 });
 

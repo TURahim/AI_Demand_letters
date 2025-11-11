@@ -44,14 +44,20 @@ export function getQueue(queueName: string): Queue {
 
   // Event listeners
   queue.on('error', (error) => {
-    logger.error(`Queue ${queueName} error`, { error: error.message });
+    logger.error(`Queue ${queueName} error:`, { 
+      error: error.message,
+      stack: error.stack,
+      queueName,
+    });
   });
 
   queue.on('failed', (job, error) => {
-    logger.error(`Job ${job.id} in queue ${queueName} failed`, {
+    logger.error(`Job ${job.id} in queue ${queueName} failed:`, {
       jobId: job.id,
       error: error.message,
+      stack: error.stack,
       attempts: job.attemptsMade,
+      queueName,
     });
   });
 
@@ -59,7 +65,17 @@ export function getQueue(queueName: string): Queue {
     logger.info(`Job ${job.id} in queue ${queueName} completed`, {
       jobId: job.id,
       duration: job.finishedOn! - job.processedOn!,
+      queueName,
     });
+  });
+
+  // Handle Redis connection events
+  queue.on('ready', () => {
+    logger.info(`Queue ${queueName} connected to Redis successfully`);
+  });
+
+  queue.on('disconnected', () => {
+    logger.warn(`Queue ${queueName} disconnected from Redis`);
   });
 
   queues.set(queueName, queue);

@@ -19,7 +19,7 @@ interface LetterListProps {
 
 export function LetterList({ showActions = true }: LetterListProps) {
   const [page, setPage] = useState(1)
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
   const { data, loading, error, execute } = useApi(
@@ -27,7 +27,7 @@ export function LetterList({ showActions = true }: LetterListProps) {
       lettersApi.listLetters({
         page,
         limit: 12,
-        status: statusFilter || undefined,
+        status: statusFilter === 'all' ? undefined : statusFilter,
         search: searchQuery || undefined,
       }),
     { immediate: true }
@@ -106,7 +106,7 @@ export function LetterList({ showActions = true }: LetterListProps) {
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All statuses</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="DRAFT">Draft</SelectItem>
             <SelectItem value="IN_REVIEW">In Review</SelectItem>
             <SelectItem value="APPROVED">Approved</SelectItem>
@@ -125,7 +125,7 @@ export function LetterList({ showActions = true }: LetterListProps) {
           <EmptyHeader>
             <EmptyTitle>No letters found</EmptyTitle>
             <EmptyDescription>
-              {searchQuery || statusFilter
+              {searchQuery || statusFilter !== 'all'
                 ? 'Try adjusting your filters'
                 : 'Generate your first letter to get started'}
             </EmptyDescription>

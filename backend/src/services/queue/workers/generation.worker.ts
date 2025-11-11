@@ -171,17 +171,34 @@ async function processGenerationJob(
  * Start the generation worker
  */
 export function startGenerationWorker(): void {
-  const queue = getQueue(QUEUE_NAMES.LETTER_GENERATION);
+  try {
+    const queue = getQueue(QUEUE_NAMES.LETTER_GENERATION);
 
-  // Process jobs with concurrency of 2
-  queue.process(2, async (job) => {
-    return await processGenerationJob(job);
-  });
+    // Process jobs with concurrency of 2
+    queue.process(2, async (job) => {
+      return await processGenerationJob(job);
+    });
 
-  logger.info('Letter generation worker started', {
-    concurrency: 2,
-    queueName: QUEUE_NAMES.LETTER_GENERATION,
-  });
+    // Handle worker-level errors
+    queue.on('error', (error) => {
+      logger.error('Generation worker error:', {
+        error: error.message,
+        stack: error.stack,
+      });
+    });
+
+    logger.info('Letter generation worker started', {
+      concurrency: 2,
+      queueName: QUEUE_NAMES.LETTER_GENERATION,
+    });
+  } catch (error: any) {
+    logger.error('Failed to start generation worker:', {
+      error: error.message,
+      stack: error.stack,
+    });
+    // Don't throw - allow server to start even if Redis is unavailable
+    logger.warn('Server will start without background job processing. Redis may not be available.');
+  }
 }
 
 /**

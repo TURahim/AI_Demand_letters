@@ -16,6 +16,8 @@ import { useApi, useMutation } from '@/src/hooks/useApi'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 
+const NO_TEMPLATE_VALUE = '__NO_TEMPLATE__'
+
 export function GenerationWizard() {
   const router = useRouter()
   const [step, setStep] = useState(1)
@@ -51,6 +53,8 @@ export function GenerationWizard() {
     specialInstructions: '',
     tone: 'professional' as 'professional' | 'firm' | 'conciliatory',
   })
+
+  const templateSelectValue = formData.templateId || NO_TEMPLATE_VALUE
 
   const { mutate: startGeneration } = useMutation(generationApi.startGeneration)
 
@@ -285,12 +289,17 @@ export function GenerationWizard() {
 
             <div>
               <Label htmlFor="templateId">Template (Optional)</Label>
-              <Select value={formData.templateId} onValueChange={(value) => handleInputChange('templateId', value)}>
+              <Select
+                value={templateSelectValue}
+                onValueChange={(value) =>
+                  handleInputChange('templateId', value === NO_TEMPLATE_VALUE ? '' : value)
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a template" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None - Use default</SelectItem>
+                  <SelectItem value={NO_TEMPLATE_VALUE}>None - Use default</SelectItem>
                   {templatesData?.templates?.map((template) => (
                     <SelectItem key={template.id} value={template.id}>
                       {template.name}

@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from "react"
 import { AppLayout } from "@/components/layout/app-layout"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { QuickActions } from "@/components/dashboard/quick-actions"
@@ -11,7 +12,8 @@ import { useApi } from '@/src/hooks/useApi'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardPage() {
-  const { data: statsData, loading: statsLoading } = useApi(() => lettersApi.getStats())
+  const getStats = useCallback(() => lettersApi.getStats(), [])
+  const { data: statsData, loading: statsLoading } = useApi(getStats)
 
   const stats = statsData?.stats
 

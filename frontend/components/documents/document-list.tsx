@@ -25,7 +25,7 @@ export function DocumentList({
   showActions = true,
 }: DocumentListProps) {
   const [page, setPage] = useState(1)
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
   const { data, loading, error, execute } = useApi(
@@ -33,7 +33,7 @@ export function DocumentList({
       documentsApi.listDocuments({
         page,
         limit: 12,
-        status: statusFilter || undefined,
+        status: statusFilter === 'all' ? undefined : statusFilter,
         search: searchQuery || undefined,
       }),
     { immediate: true }
@@ -114,15 +114,18 @@ export function DocumentList({
             className="pl-10"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(value) => {
-          setStatusFilter(value)
-          setPage(1)
-        }}>
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => {
+            setStatusFilter(value)
+            setPage(1)
+          }}
+        >
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All statuses</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="PENDING">Pending</SelectItem>
             <SelectItem value="PROCESSING">Processing</SelectItem>
             <SelectItem value="COMPLETED">Completed</SelectItem>
@@ -140,7 +143,7 @@ export function DocumentList({
           <EmptyHeader>
             <EmptyTitle>No documents found</EmptyTitle>
             <EmptyDescription>
-              {searchQuery || statusFilter
+              {searchQuery || statusFilter !== 'all'
                 ? 'Try adjusting your filters'
                 : 'Upload your first document to get started'}
             </EmptyDescription>
