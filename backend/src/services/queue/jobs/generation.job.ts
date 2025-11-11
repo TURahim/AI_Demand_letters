@@ -54,7 +54,14 @@ export interface LetterGenerationJobResult {
     totalTokens: number;
   };
   cost?: number;
-  error?: string;
+  error?: string | StructuredGenerationError;
   generatedAt: Date;
+}
+
+export interface StructuredGenerationError {
+  title: string;
+  reason: string;
+  probableCause: string;
+  suggestedAction: string;
 }
 

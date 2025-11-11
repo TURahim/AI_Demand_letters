@@ -1,5 +1,9 @@
 import { Job } from 'bull';
-import { LetterGenerationJobData, LetterGenerationJobResult } from '../jobs/generation.job';
+import {
+  LetterGenerationJobData,
+  LetterGenerationJobResult,
+  StructuredGenerationError,
+} from '../jobs/generation.job';
 import { getQueue, QUEUE_NAMES } from '../queue.service';
 import * as generationService from '../../ai/generation.service';
 import * as letterService from '../../letters/letter.service';
@@ -30,61 +34,33 @@ async function processGenerationJob(
     const damages = job.data.damages || {};
     const defendantAddress = job.data.defendantAddress || 'Address not provided';
 
-    let aiResult;
-    try {
-      aiResult = await generationService.generateDemandLetter({
-        caseType: job.data.caseType,
-        incidentDate: job.data.incidentDate,
-        incidentDescription: job.data.incidentDescription,
-        location: job.data.location,
-        clientName: job.data.clientName,
-        clientContact: job.data.clientContact,
-        defendantName: job.data.defendantName,
-        defendantAddress,
-        damages,
-        documentIds: job.data.documentIds,
-        firmId: job.data.firmId,
-        templateContent: job.data.templateContent,
-        specialInstructions: job.data.specialInstructions,
-        tone: job.data.tone,
-        temperature: job.data.temperature,
-        maxTokens: job.data.maxTokens,
-      });
-    } catch (aiError: any) {
-      logger.error('AI generation failed, using fallback letter content', {
-        jobId: job.id,
-        letterId: job.data.letterId,
-        error: aiError.message,
-      });
-
-      const fallbackLetter = buildFallbackLetter(job.data, defendantAddress, damages);
-
-      aiResult = {
-        letter: fallbackLetter,
-        usage: {
-          inputTokens: 0,
-          outputTokens: 0,
-          totalTokens: 0,
-        },
-        metadata: {
-          modelId: 'fallback-template',
-          requestId: `fallback-${job.id}`,
-          generatedAt: new Date(),
-        },
-      };
-    }
+    const aiResult = await generationService.generateDemandLetter({
+      caseType: job.data.caseType,
+      incidentDate: job.data.incidentDate,
+      incidentDescription: job.data.incidentDescription,
+      location: job.data.location,
+      clientName: job.data.clientName,
+      clientContact: job.data.clientContact,
+      defendantName: job.data.defendantName,
+      defendantAddress,
+      damages,
+      documentIds: job.data.documentIds,
+      firmId: job.data.firmId,
+      templateContent: job.data.templateContent,
+      specialInstructions: job.data.specialInstructions,
+      tone: job.data.tone,
+      temperature: job.data.temperature,
+      maxTokens: job.data.maxTokens,
+    });
 
     await job.progress(60);
 
     // Calculate cost
-    const cost =
-      aiResult.usage.inputTokens > 0 || aiResult.usage.outputTokens > 0
-        ? calculateUsageCost(
-            aiResult.usage.inputTokens,
-            aiResult.usage.outputTokens,
-            BEDROCK_CONFIG.modelId
-          )
-        : 0;
+    const cost = calculateUsageCost(
+      aiResult.usage.inputTokens,
+      aiResult.usage.outputTokens,
+      BEDROCK_CONFIG.modelId
+    );
 
     // Update letter in database
     await letterService.updateLetter(
@@ -159,10 +135,12 @@ async function processGenerationJob(
       generatedAt: new Date(),
     };
   } catch (error: any) {
+    const structuredError = buildGenerationError(error);
+
     logger.error('Generation job failed', {
       jobId: job.id,
       letterId: job.data.letterId,
-      error: error.message,
+      error: structuredError.reason,
       duration: Date.now() - startTime,
     });
 
@@ -174,11 +152,11 @@ async function processGenerationJob(
         job.data.userId,
         {
           status: 'DRAFT',
-          metadata: {
-            error: error.message,
-            failedAt: new Date().toISOString(),
-            generationStatus: 'failed',
-          },
+      metadata: {
+        generationStatus: 'failed',
+        generationError: structuredError,
+        failedAt: new Date().toISOString(),
+      },
         }
       );
     } catch (updateError) {
@@ -192,7 +170,7 @@ async function processGenerationJob(
       success: false,
       letterId: job.data.letterId,
       content: '',
-      error: error.message,
+      error: structuredError,
       generatedAt: new Date(),
     };
   }
@@ -232,75 +210,6 @@ export function startGenerationWorker(): void {
   }
 }
 
-function buildFallbackLetter(
-  data: LetterGenerationJobData,
-  defendantAddress: string | undefined,
-  damages: LetterGenerationJobData['damages'] | undefined
-): string {
-  const incidentDate = data.incidentDate
-    ? new Date(data.incidentDate).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : 'the incident date';
-
-  const damagesLines: string[] = [];
-
-  if (damages) {
-    if (damages.medical) {
-      damagesLines.push(`• Medical expenses: $${damages.medical.toLocaleString()}`);
-    }
-    if (damages.lostWages) {
-      damagesLines.push(`• Lost wages: $${damages.lostWages.toLocaleString()}`);
-    }
-    if (damages.propertyDamage) {
-      damagesLines.push(`• Property damage: $${damages.propertyDamage.toLocaleString()}`);
-    }
-    if (damages.painAndSuffering) {
-      damagesLines.push(
-        `• Pain and suffering: $${damages.painAndSuffering.toLocaleString()}`
-      );
-    }
-
-    if (damages.itemizedMedical?.length) {
-      damagesLines.push(
-        '• Itemized medical treatment:',
-        ...damages.itemizedMedical.map(
-          (item) => `  - ${item.description}: $${item.amount.toLocaleString()}`
-        )
-      );
-    }
-  }
-
-  const damagesSection =
-    damagesLines.length > 0
-      ? `The following damages have been incurred and documented:\n${damagesLines.join('\n')}\n\n`
-      : '';
-
-  const documentsSection =
-    data.documentIds && data.documentIds.length > 0
-      ? `Supporting documentation (${data.documentIds.length} documents) has been provided and is available upon request.\n\n`
-      : '';
-
-  return `Dear ${data.defendantName},
-
-We represent ${data.clientName} in connection with the ${data.caseType.toLowerCase()} that occurred on ${incidentDate}.
-
-Summary of Incident:
-${data.incidentDescription}
-
-Location of Incident: ${data.location || 'Not specified'}
-Defendant Address: ${defendantAddress || 'Not provided'}
-
-${damagesSection}${documentsSection}Please contact our office within 14 days to discuss resolution. If we do not receive a response within this timeframe, we will proceed with all available legal remedies.
-
-Sincerely,
-
-${data.clientName}'s Legal Team
-Steno AI`;
-}
-
 /**
  * Stop the generation worker
  */
@@ -308,5 +217,69 @@ export async function stopGenerationWorker(): Promise<void> {
   const queue = getQueue(QUEUE_NAMES.LETTER_GENERATION);
   await queue.close();
   logger.info('Letter generation worker stopped');
+}
+
+function buildGenerationError(error: any): StructuredGenerationError {
+  const defaultError: StructuredGenerationError = {
+    title: 'Generation failed',
+    reason: 'An unexpected error occurred while generating the demand letter.',
+    probableCause:
+      'The AI service encountered an unexpected error. This may be due to missing required fields, invalid case data, or service interruption.',
+    suggestedAction:
+      'Review the case information, ensure all required fields are complete, then retry. If the issue persists, contact support.',
+  };
+
+  if (!error) {
+    return defaultError;
+  }
+
+  const errMsg = error.message || error.reason || `${error}`;
+
+  if (errMsg.includes('Missing required fields')) {
+    return {
+      title: 'Missing required information',
+      reason: errMsg,
+      probableCause:
+        'One or more required fields were blank or invalid (case type, incident description, client name, defendant name, etc.).',
+      suggestedAction:
+        'Return to the generation form, make sure all required sections are filled in with descriptive information, and try again.',
+    };
+  }
+
+  if (errMsg.includes('Input context too large')) {
+    return {
+      title: 'Case summary too large',
+      reason: errMsg,
+      probableCause:
+        'The combined case summary, documents, and damages exceeded the maximum token limit for the AI model.',
+      suggestedAction:
+        'Shorten the incident description or remove some supporting documents, then retry.',
+    };
+  }
+
+  if (errMsg.includes('AI service is currently busy') || errMsg.includes('request timed out')) {
+    return {
+      title: 'AI service unavailable',
+      reason: errMsg,
+      probableCause: 'The AI provider rate-limited or timed out while processing the request.',
+      suggestedAction: 'Wait a moment and try again. If this persists, contact support.',
+    };
+  }
+
+  if (errMsg.includes('AccessDenied') || errMsg.includes('Authentication')) {
+    return {
+      title: 'AI credentials missing or invalid',
+      reason: errMsg,
+      probableCause:
+        'The backend is missing valid AWS Bedrock credentials or does not have permission to invoke the model.',
+      suggestedAction:
+        'Verify the AWS credentials and Bedrock access configuration, then retry the generation.',
+    };
+  }
+
+  return {
+    ...defaultError,
+    reason: errMsg,
+  };
 }
 
