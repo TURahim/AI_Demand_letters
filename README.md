@@ -182,7 +182,7 @@ See [Infrastructure Documentation](infrastructure/terraform/README.md) for AWS d
 
 ## 📈 Development Roadmap
 
-**Current Phase**: PR-08 - Letter Editor Backend (Next)
+**Current Phase**: PR-08 - Letter Editor Backend (In Progress - Backend Complete)
 
 See [Engineering Roadmap](docs/Initialdocs/ENGINEERING_ROADMAP.md) for complete task breakdown.
 
@@ -261,12 +261,26 @@ See [Engineering Roadmap](docs/Initialdocs/ENGINEERING_ROADMAP.md) for complete 
 - Loading skeletons and empty states
 - Error boundaries for resilience
 - Build passing with no compilation errors
+- Fixed authentication UX (error display, navigation)
+- Fixed backend error handling (queue, logging)
+- Fixed Radix Select empty value errors
+- Fixed dashboard infinite reload loop
+
+**Letter Editor Backend (PR-08)** - Backend Complete ✅
+- Comment model with threaded replies
+- Full CRUD comment service (create, read, update, delete)
+- Resolve/unresolve comments
+- Comment controller with Zod validation
+- 8 REST API endpoints for comments
+- Firm-level isolation and permissions
+- Integration with letter routes
 
 ### In Progress 🚧
-- Authentication flow fixes (signup/login redirect issues, error handling improvements)
+- PR-08: Auto-save service implementation
+- PR-08: Frontend comment sidebar and UI
+- PR-08: Integration tests for comment system
 
 ### Upcoming 📅
-- PR-08: Letter Editor Backend (auto-save, comments system)
 - PR-09: Word Export Service (DOCX generation with firm branding)
 - PR-10: Real-time Collaboration (Optional - Yjs/TipTap for Google Docs-style editing)
 - PR-11: Analytics & Dashboard (usage metrics, firm-wide statistics)
