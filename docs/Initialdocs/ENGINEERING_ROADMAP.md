@@ -23,7 +23,7 @@
 | PR-01 | Infrastructure & Database | Medium | 3-5 | None | ✅ Complete |
 | PR-02 | Authentication & Authorization | High | 5-7 | PR-01 | ✅ Complete |
 | PR-03 | Document Upload & Storage | Medium | 4-5 | PR-01 | ✅ Complete |
-| PR-04 | AI Service (Bedrock) | High | 6-8 | PR-01 | ⏳ Not Started |
+| PR-04 | AI Service (Bedrock) | High | 6-8 | PR-01 | ✅ Complete |
 | PR-05 | Template Management | Medium | 4-5 | PR-01, PR-02 | ✅ Complete |
 | PR-06 | Letter Generation Engine | High | 7-9 | PR-03, PR-04, PR-05 | 🚧 In Progress |
 | PR-07 | Frontend Integration | Medium | 5-6 | PR-02, PR-03, PR-05 | ⏳ Not Started |
@@ -236,10 +236,12 @@ GET    /api/documents/:id/download — Download document
 ---
 
 ## PR-04: AI Service Integration (AWS Bedrock)
-**Complexity**: High | **Days**: 6-8 | **Dependencies**: PR-01
+**Complexity**: High | **Days**: 6-8 | **Dependencies**: PR-01 | **Status**: ✅ COMPLETE
 
 ### Objectives
 Integrate AWS Bedrock with Claude 3.5 Sonnet for letter generation.
+
+**Completed**: All tasks ✅ - Bedrock client integrated, prompt system complete, 5 AI endpoints live, usage tracking implemented
 
 ### Tasks
 
@@ -331,12 +333,12 @@ POST   /api/templates/:id/clone — Clone template
 ---
 
 ## PR-06: Letter Generation Engine
-**Complexity**: High | **Days**: 7-9 | **Dependencies**: PR-03, PR-04, PR-05 | **Status**: 🚧 IN PROGRESS
+**Complexity**: High | **Days**: 7-9 | **Dependencies**: PR-03, PR-04, PR-05 | **Status**: 🚧 READY TO START
 
 ### Objectives
 Orchestrate end-to-end letter generation with AI.
 
-**Next Step**: Blocked on PR-04 (AI/Bedrock) completion. Once PR-04 done, can start generation orchestration & background jobs.
+**Next Step**: PR-04 ✅ Complete! Ready to implement generation orchestration, letter CRUD, versioning, and background jobs.
 
 ### Tasks
 

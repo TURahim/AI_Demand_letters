@@ -1,8 +1,8 @@
 # Steno AI - Demand Letter Generator
 
-> 🚀 **Status:** Frontend Complete ✅ | Backend Foundation Complete ✅ | Core Features In Progress 🚧
+> 🚀 **Status:** Frontend Complete ✅ | Backend Core Complete ✅ | Letter Generation Ready 🚀
 >
-> **Completed**: PR-01, PR-02, PR-03, PR-05 (Infrastructure, Auth, Upload, Templates)
+> **Completed**: PR-01, PR-02, PR-03, PR-04, PR-05 (Infrastructure, Auth, Upload, AI/Bedrock, Templates)
 
 An AI-powered platform for law firms to generate professional demand letters from uploaded case documents.
 
