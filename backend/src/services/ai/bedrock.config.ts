@@ -23,11 +23,16 @@ export const BEDROCK_CONFIG = {
 
 /**
  * Model pricing (per million tokens)
+ * Supports both direct model IDs and inference profile IDs
  */
 export const MODEL_PRICING = {
   'anthropic.claude-3-5-sonnet-20241022-v2:0': {
     input: 3.00,  // $3.00 per million input tokens
     output: 15.00, // $15.00 per million output tokens
+  },
+  'us.anthropic.claude-3-5-sonnet-20241022-v2:0': {
+    input: 3.00,
+    output: 15.00,
   },
   'anthropic.claude-3-5-sonnet-20240620-v1:0': {
     input: 3.00,
@@ -56,9 +61,15 @@ export function getModelPricing() {
 
 /**
  * Token limits for models
+ * Supports both direct model IDs and inference profile IDs
  */
 export const MODEL_LIMITS = {
   'anthropic.claude-3-5-sonnet-20241022-v2:0': {
+    maxInputTokens: 200000,
+    maxOutputTokens: 4096,
+    contextWindow: 200000,
+  },
+  'us.anthropic.claude-3-5-sonnet-20241022-v2:0': {
     maxInputTokens: 200000,
     maxOutputTokens: 4096,
     contextWindow: 200000,
