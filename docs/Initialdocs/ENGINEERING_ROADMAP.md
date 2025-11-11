@@ -1,7 +1,7 @@
 # Engineering Roadmap - Steno Demand Letter Generator
 
-**Status**: Frontend ✅ Complete | Backend ⏳ Not Started  
-**Timeline**: 3-5 months (75-105 dev days)  
+**Status**: Frontend ✅ Complete | Backend Foundation ✅ Complete (PR-01, 02, 03, 05) | Core Features 🚧 In Progress  
+**Timeline**: ~35 dev days completed | ~40-70 dev days remaining  
 **Team**: 2-3 developers
 
 ---
@@ -20,12 +20,12 @@
 
 | PR | Title | Complexity | Days | Dependencies | Status |
 |----|-------|------------|------|--------------|--------|
-| PR-01 | Infrastructure & Database | Medium | 3-5 | None | ⏳ Not Started |
-| PR-02 | Authentication & Authorization | High | 5-7 | PR-01 | ⏳ Not Started |
-| PR-03 | Document Upload & Storage | Medium | 4-5 | PR-01 | ⏳ Not Started |
+| PR-01 | Infrastructure & Database | Medium | 3-5 | None | ✅ Complete |
+| PR-02 | Authentication & Authorization | High | 5-7 | PR-01 | ✅ Complete |
+| PR-03 | Document Upload & Storage | Medium | 4-5 | PR-01 | ✅ Complete |
 | PR-04 | AI Service (Bedrock) | High | 6-8 | PR-01 | ⏳ Not Started |
-| PR-05 | Template Management | Medium | 4-5 | PR-01, PR-02 | ⏳ Not Started |
-| PR-06 | Letter Generation Engine | High | 7-9 | PR-03, PR-04, PR-05 | ⏳ Not Started |
+| PR-05 | Template Management | Medium | 4-5 | PR-01, PR-02 | ✅ Complete |
+| PR-06 | Letter Generation Engine | High | 7-9 | PR-03, PR-04, PR-05 | 🚧 In Progress |
 | PR-07 | Frontend Integration | Medium | 5-6 | PR-02, PR-03, PR-05 | ⏳ Not Started |
 | PR-08 | Letter Editor Backend | Medium | 4-5 | PR-06 | ⏳ Not Started |
 | PR-09 | Word Export Service | Medium | 4-5 | PR-06 | ⏳ Not Started |
@@ -37,10 +37,12 @@
 ---
 
 ## PR-01: Infrastructure & Database Setup
-**Complexity**: Medium | **Days**: 3-5 | **Dependencies**: None
+**Complexity**: Medium | **Days**: 3-5 | **Dependencies**: None | **Status**: ✅ COMPLETE
 
 ### Objectives
 Set up AWS infrastructure, PostgreSQL database, and development environment.
+
+**Completed**: All tasks ✅ - Backend server running, database configured, Terraform infrastructure templated, security baseline established
 
 ### Tasks
 
@@ -109,10 +111,12 @@ Set up AWS infrastructure, PostgreSQL database, and development environment.
 ---
 
 ## PR-02: Authentication & Authorization
-**Complexity**: High | **Days**: 5-7 | **Dependencies**: PR-01
+**Complexity**: High | **Days**: 5-7 | **Dependencies**: PR-01 | **Status**: ✅ COMPLETE
 
 ### Objectives
 Implement JWT-based authentication with firm-level data isolation.
+
+**Completed**: All tasks ✅ - JWT auth working, user CRUD complete, firm isolation enforced, 15+ integration tests passing
 
 ### Tasks
 
@@ -173,10 +177,12 @@ GET    /api/firms/:id        — Get firm details
 ---
 
 ## PR-03: Document Upload & Storage
-**Complexity**: Medium | **Days**: 4-5 | **Dependencies**: PR-01
+**Complexity**: Medium | **Days**: 4-5 | **Dependencies**: PR-01 | **Status**: ✅ COMPLETE
 
 ### Objectives
 Build S3-based document upload with text extraction.
+
+**Completed**: All tasks ✅ - S3 integration working, PDF/DOCX extraction done, OCR ready, file hashing implemented, 6+ tests passing
 
 ### Tasks
 
@@ -276,10 +282,12 @@ POST   /api/ai/analyze-documents — Analyze documents
 ---
 
 ## PR-05: Template Management System
-**Complexity**: Medium | **Days**: 4-5 | **Dependencies**: PR-01, PR-02
+**Complexity**: Medium | **Days**: 4-5 | **Dependencies**: PR-01, PR-02 | **Status**: ✅ COMPLETE
 
 ### Objectives
 Build template CRUD with variable system.
+
+**Completed**: All tasks ✅ - Variable parser/validator/renderer complete, template CRUD working, 3 default templates seeded, 54 tests passing (100%)
 
 ### Tasks
 
@@ -323,10 +331,12 @@ POST   /api/templates/:id/clone — Clone template
 ---
 
 ## PR-06: Letter Generation Engine
-**Complexity**: High | **Days**: 7-9 | **Dependencies**: PR-03, PR-04, PR-05
+**Complexity**: High | **Days**: 7-9 | **Dependencies**: PR-03, PR-04, PR-05 | **Status**: 🚧 IN PROGRESS
 
 ### Objectives
 Orchestrate end-to-end letter generation with AI.
+
+**Next Step**: Blocked on PR-04 (AI/Bedrock) completion. Once PR-04 done, can start generation orchestration & background jobs.
 
 ### Tasks
 
