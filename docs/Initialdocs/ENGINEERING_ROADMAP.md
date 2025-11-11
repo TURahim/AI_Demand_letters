@@ -25,7 +25,7 @@
 | PR-03 | Document Upload & Storage | Medium | 4-5 | PR-01 | ✅ Complete |
 | PR-04 | AI Service (Bedrock) | High | 6-8 | PR-01 | ✅ Complete |
 | PR-05 | Template Management | Medium | 4-5 | PR-01, PR-02 | ✅ Complete |
-| PR-06 | Letter Generation Engine | High | 7-9 | PR-03, PR-04, PR-05 | 🚧 In Progress |
+| PR-06 | Letter Generation Engine | High | 7-9 | PR-03, PR-04, PR-05 | ✅ Complete |
 | PR-07 | Frontend Integration | Medium | 5-6 | PR-02, PR-03, PR-05 | ⏳ Not Started |
 | PR-08 | Letter Editor Backend | Medium | 4-5 | PR-06 | ⏳ Not Started |
 | PR-09 | Word Export Service | Medium | 4-5 | PR-06 | ⏳ Not Started |
@@ -333,12 +333,12 @@ POST   /api/templates/:id/clone — Clone template
 ---
 
 ## PR-06: Letter Generation Engine
-**Complexity**: High | **Days**: 7-9 | **Dependencies**: PR-03, PR-04, PR-05 | **Status**: 🚧 IN PROGRESS
+**Complexity**: High | **Days**: 7-9 | **Dependencies**: PR-03, PR-04, PR-05 | **Status**: ✅ COMPLETE
 
 ### Objectives
 Orchestrate end-to-end letter generation with AI.
 
-**Progress**: Queue infrastructure, letter CRUD, versioning, and generation endpoints implemented. End-to-end testing & retry workflow pending.
+**Completed**: All core features implemented including queue infrastructure, letter CRUD, versioning, generation endpoints, and **many-to-many document linking**. 6 integration tests passing.
 
 ### Tasks
 
