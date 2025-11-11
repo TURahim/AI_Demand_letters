@@ -246,11 +246,22 @@ See [Engineering Roadmap](docs/Initialdocs/ENGINEERING_ROADMAP.md) for complete 
 **Letter Generation Engine (PR-06)**
 - End-to-end letter generation orchestration
 - BullMQ queue infrastructure with Redis
-- Background job processing for AI generation
+- Background job processing for AI generation with robust worker startup
 - Letter CRUD operations with many-to-many document linking
 - Version control system with diff calculation
 - Generation status tracking (pending, processing, completed, failed)
 - Letter-document relationship management
+- **Enhanced Generation Worker (Refactored):**
+  - Retry mechanism with exponential backoff (3 attempts, 0.5-2s delays)
+  - 60-second hard timeout for AI generation calls
+  - Zod schema validation before processing (validates required fields)
+  - Metadata preservation (merges instead of replacing)
+  - Dynamic progress updates (5% → 10% → 50% → 70% → 100%)
+  - Parallelized version creation and usage tracking
+  - Enhanced error logging with full stack traces
+  - Job deduplication using letterId as jobId
+  - Security comments for PII handling
+  - Structured error responses for AI failures (no fallback content)
 - 6+ integration tests
 
 **Frontend Integration & Polish (PR-07)**
@@ -302,6 +313,11 @@ See [Engineering Roadmap](docs/Initialdocs/ENGINEERING_ROADMAP.md) for complete 
   - Fixed "Maximum update depth exceeded" in generation wizard
   - Memoized API calls in useApi hook dependencies
   - Eliminated infinite render loops on /generation page
+- **AI Generation Reliability:**
+  - Fixed AWS Bedrock model ID (using inference profile format)
+  - Fixed BullMQ worker startup race conditions (5-strategy approach)
+  - Implemented structured error handling (no fallback content on AI failure)
+  - Generation worker now reliably starts on every server restart
 - **All builds passing:** Backend TypeScript ✅ | Frontend Next.js ✅
 
 **Word Export Service (PR-09)** - Complete ✅

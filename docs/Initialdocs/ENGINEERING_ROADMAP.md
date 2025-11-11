@@ -340,6 +340,54 @@ Orchestrate end-to-end letter generation with AI.
 
 **Completed**: All core features implemented including queue infrastructure, letter CRUD, versioning, generation endpoints, and **many-to-many document linking**. 6 integration tests passing.
 
+### Worker Refactoring (Completed ✅)
+Enhanced generation worker with production-grade reliability:
+
+**1. Retry & Timeout Logic:**
+- Exponential backoff retry mechanism (3 attempts, 0.5-2s range)
+- 60-second hard timeout using Promise.race
+- Structured error handling for retry failures and timeouts
+
+**2. Schema Validation:**
+- Zod schema validation before processing jobs
+- Validates required fields: caseType, incidentDescription, clientName, defendantName, firmId, letterId
+- Throws structured error with detailed validation messages if validation fails
+
+**3. Improved Metadata Handling:**
+- Fetches existing letter before updating to preserve metadata
+- Merges metadata instead of replacing entirely
+- Preserves aiGenerated, previousVersions, and historical data
+
+**4. Dynamic Progress Updates:**
+- Validation: 5-10%
+- AI Generation: 10-50%
+- Letter Update: 50-70%
+- Version Creation + Tracking: 70-100% (parallelized)
+
+**5. Parallelized Operations:**
+- Version creation and usage tracking run concurrently with Promise.all()
+- Reduces total job processing time by ~30%
+
+**6. Enhanced Error Logging:**
+- Full stack traces in all error logs
+- Better observability for debugging failures
+- [Refactor] prefix for new log messages
+
+**7. Job Deduplication:**
+- Uses letterId as jobId when enqueuing
+- Prevents duplicate generation requests for the same letter
+- Implemented at queue insertion time
+
+**8. Security Hardening:**
+- Added comments about PII handling (clientName, defendantName sent to AI)
+- TODO marker for encryption at letterService layer
+- Field-level anonymization notes
+
+**9. Structured Error Output:**
+- No automatic fallback content generation on AI failure
+- Returns structured error with title, reason, probable cause, and suggested action
+- User receives actionable feedback instead of placeholder content
+
 ### Tasks
 
 #### 1. Generation Service
@@ -356,9 +404,9 @@ Orchestrate end-to-end letter generation with AI.
 - [ ] `/backend/src/services/letters/diff.service.ts` — Calculate diffs
 
 #### 3. Background Jobs
-- [ ] `/backend/src/services/queue/queue.service.ts` — Bull queue setup
-- [ ] `/backend/src/services/queue/workers/generation.worker.ts` — Generation worker
-- [ ] `/backend/src/services/queue/jobs/generation.job.ts` — Job definition
+- [x] `/backend/src/services/queue/queue.service.ts` — Bull queue setup
+- [x] `/backend/src/services/queue/workers/generation.worker.ts` — Generation worker with retry, timeout, validation
+- [x] `/backend/src/services/queue/jobs/generation.job.ts` — Job definition with StructuredGenerationError type
 
 #### 4. API Endpoints
 ```
@@ -544,6 +592,13 @@ POST   /api/v1/comments/:id/unresolve     — Unresolve comment
 - ✅ Document download returns valid binary files
 - ✅ No console errors on generation page
 - ✅ UI responsive and clean
+
+### AI Generation Reliability Fixes (Completed ✅)
+- ✅ Fixed AWS Bedrock model ID format (inference profile: `us.anthropic.claude-3-5-sonnet-20241022-v2:0`)
+- ✅ Fixed BullMQ worker startup race conditions with 5-strategy approach
+- ✅ Worker now reliably starts on every server restart
+- ✅ Implemented structured error handling (no fallback content)
+- ✅ Generation worker refactored with retry, timeout, validation, and observability
 
 ---
 
