@@ -120,7 +120,10 @@ export function GenerationWizard() {
         router.push(`/editor?letterId=${result.data.letterId}`)
       }, 2000)
     } else {
-      toast.error(result.error || 'Failed to start generation')
+      // Show detailed error message
+      const errorMsg = result.error || 'Failed to start generation'
+      console.error('Generation error:', result)
+      toast.error(errorMsg)
       setGenerating(false)
     }
   }

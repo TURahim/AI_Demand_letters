@@ -12,23 +12,28 @@ export const startGeneration = asyncHandler(async (req: Request, res: Response) 
   const userId = req.user!.id;
   const firmId = req.user!.firmId;
 
-  logger.info('Start generation request', { userId, firmId });
+  logger.info('Start generation request', { userId, firmId, body: req.body });
 
   // Validate input
-  const validatedData = startGenerationSchema.parse(req.body);
+  try {
+    const validatedData = startGenerationSchema.parse(req.body);
+    
+    // Start generation
+    const result = await generationService.startLetterGeneration({
+      ...validatedData,
+      firmId,
+      userId,
+    });
 
-  // Start generation
-  const result = await generationService.startLetterGeneration({
-    ...validatedData,
-    firmId,
-    userId,
-  });
-
-  res.status(202).json({
-    status: 'success',
-    message: 'Letter generation started',
-    data: result,
-  });
+    res.status(202).json({
+      status: 'success',
+      message: 'Letter generation started',
+      data: result,
+    });
+  } catch (error: any) {
+    logger.error('Generation validation error', { error: error.message, issues: error.issues, body: req.body });
+    throw error;
+  }
 });
 
 /**
