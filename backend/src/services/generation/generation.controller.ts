@@ -31,7 +31,15 @@ export const startGeneration = asyncHandler(async (req: Request, res: Response) 
       data: result,
     });
   } catch (error: any) {
-    logger.error('Generation validation error', { error: error.message, issues: error.issues, body: req.body });
+    if (error instanceof Error && 'issues' in error) {
+      logger.warn('Generation validation error', {
+        error: error.message,
+        issues: (error as any).issues,
+        body: req.body,
+      });
+    } else {
+      logger.error('Unexpected generation error', { error: error?.message, body: req.body });
+    }
     throw error;
   }
 });
