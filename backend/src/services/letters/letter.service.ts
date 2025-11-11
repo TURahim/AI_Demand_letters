@@ -366,7 +366,7 @@ export async function updateLetter(
 }
 
 /**
- * Delete letter (soft delete)
+ * Delete letter (hard delete)
  */
 export async function deleteLetter(
   letterId: string,
@@ -376,21 +376,20 @@ export async function deleteLetter(
   // Verify access
   await getLetterById(letterId, firmId);
 
-  // Soft delete by updating status
-  await prisma.letter.update({
-    where: { id: letterId },
-    data: {
-      status: 'ARCHIVED',
-    },
-  });
-
+  // Create audit log before deletion
   await createAuditLog(AUDITED_ACTIONS.LETTER_DELETE, 'Letter', {
     userId,
     firmId,
     resourceId: letterId,
   });
 
-  logger.info('Letter deleted', { letterId, firmId, userId });
+  // Hard delete - Prisma will cascade delete related records based on schema
+  // This will delete: versions, exports, letter-document links, collaborations, comments
+  await prisma.letter.delete({
+    where: { id: letterId },
+  });
+
+  logger.info('Letter permanently deleted', { letterId, firmId, userId });
 }
 
 /**

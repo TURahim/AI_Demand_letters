@@ -36,13 +36,13 @@ export function LetterList({ showActions = true }: LetterListProps) {
   const { data, loading, error, execute } = useApi(fetchLetters, { immediate: true })
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this letter?')) {
+    if (!confirm('Are you sure you want to permanently delete this letter? This action cannot be undone.')) {
       return
     }
 
     const result = await lettersApi.deleteLetter(id)
     if (result.status === 'success') {
-      toast.success('Letter deleted successfully')
+      toast.success('Letter permanently deleted')
       execute() // Refresh list
     } else {
       toast.error(result.message || 'Failed to delete letter')
