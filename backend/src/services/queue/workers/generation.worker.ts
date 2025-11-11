@@ -1,4 +1,5 @@
 import { Job } from 'bull';
+import { z } from 'zod';
 import {
   LetterGenerationJobData,
   LetterGenerationJobResult,
@@ -13,6 +14,89 @@ import { BEDROCK_CONFIG } from '../../ai/bedrock.config';
 import logger from '../../../utils/logger';
 
 /**
+ * Zod schema for validating letter generation job data
+ * Ensures all required fields are present before processing
+ */
+const LetterGenerationJobDataSchema = z.object({
+  letterId: z.string().uuid('Invalid letter ID format'),
+  firmId: z.string().uuid('Invalid firm ID format'),
+  userId: z.string().uuid('Invalid user ID format'),
+  caseType: z.string().min(1, 'Case type is required'),
+  incidentDate: z.union([z.string(), z.date()]),
+  incidentDescription: z.string().min(10, 'Incident description must be at least 10 characters'),
+  location: z.string().optional(),
+  clientName: z.string().min(1, 'Client name is required'),
+  clientContact: z.string().optional(),
+  defendantName: z.string().min(1, 'Defendant name is required'),
+  defendantAddress: z.string().optional(),
+  damages: z.object({
+    medical: z.number().min(0).optional(),
+    lostWages: z.number().min(0).optional(),
+    propertyDamage: z.number().min(0).optional(),
+    painAndSuffering: z.number().min(0).optional(),
+    other: z.record(z.number().min(0)).optional(),
+    itemizedMedical: z.array(z.object({
+      description: z.string(),
+      amount: z.number().min(0),
+    })).optional(),
+    notes: z.string().optional(),
+  }).optional(),
+  documentIds: z.array(z.string().uuid()).optional(),
+  templateId: z.string().uuid().optional(),
+  templateContent: z.string().optional(),
+  specialInstructions: z.string().optional(),
+  tone: z.enum(['professional', 'firm', 'conciliatory', 'assertive', 'diplomatic', 'urgent']).optional(),
+  temperature: z.number().min(0).max(1).optional(),
+  maxTokens: z.number().min(100).max(4096).optional(),
+});
+
+/**
+ * Retry configuration for AI generation
+ */
+const RETRY_CONFIG = {
+  maxAttempts: 3,
+  baseDelay: 500, // 0.5 seconds
+  maxDelay: 2000, // 2 seconds
+};
+
+/**
+ * Timeout configuration for AI generation
+ */
+const GENERATION_TIMEOUT_MS = 60000; // 60 seconds
+
+/**
+ * Retry helper with exponential backoff
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxAttempts: number = RETRY_CONFIG.maxAttempts,
+  attempt: number = 1
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error: any) {
+    if (attempt >= maxAttempts) {
+      throw error;
+    }
+
+    const delay = Math.min(
+      RETRY_CONFIG.baseDelay * Math.pow(2, attempt - 1),
+      RETRY_CONFIG.maxDelay
+    );
+
+    logger.warn('[Refactor] Retrying AI generation', {
+      attempt,
+      maxAttempts,
+      delay,
+      error: error.message,
+    });
+
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return retryWithBackoff(fn, maxAttempts, attempt + 1);
+  }
+}
+
+/**
  * Process letter generation job
  */
 async function processGenerationJob(
@@ -21,20 +105,48 @@ async function processGenerationJob(
   const startTime = Date.now();
   
   try {
-    logger.info('Processing generation job', {
+    logger.info('[Refactor] Processing generation job', {
       jobId: job.id,
       letterId: job.data.letterId,
       firmId: job.data.firmId,
     });
 
-    // Update job progress
+    // Schema validation - ensure required fields are present
+    await job.progress(5);
+    try {
+      LetterGenerationJobDataSchema.parse(job.data);
+      logger.debug('[Refactor] Job data validation passed', {
+        jobId: job.id,
+        letterId: job.data.letterId,
+      });
+    } catch (validationError: any) {
+      const structuredError: StructuredGenerationError = {
+        title: 'Missing required fields',
+        reason: validationError.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ') || 'Missing required fields',
+        probableCause: 'One or more required fields were missing or invalid in the generation request.',
+        suggestedAction: 'Review the generation request and ensure all required fields (caseType, incidentDescription, clientName, defendantName, firmId, letterId) are provided.',
+      };
+      
+      logger.error('[Refactor] Job data validation failed', {
+        jobId: job.id,
+        letterId: job.data.letterId,
+        validationErrors: validationError.errors,
+        stack: validationError.stack,
+      });
+      
+      throw structuredError;
+    }
+
     await job.progress(10);
 
-    // Generate the demand letter using AI
+    // Generate the demand letter using AI with retry and timeout
     const damages = job.data.damages || {};
     const defendantAddress = job.data.defendantAddress || 'Address not provided';
 
-    const aiResult = await generationService.generateDemandLetter({
+    // Security note: PII fields (clientName, defendantName) are sent to AI provider
+    // TODO: Ensure encryption is handled at the letterService layer for data at rest
+    // Consider anonymizing or tokenizing PII before sending to external AI services
+    const generationInput = {
       caseType: job.data.caseType,
       incidentDate: job.data.incidentDate,
       incidentDescription: job.data.incidentDescription,
@@ -51,9 +163,34 @@ async function processGenerationJob(
       tone: job.data.tone,
       temperature: job.data.temperature,
       maxTokens: job.data.maxTokens,
+    };
+
+    // Wrap generation in timeout and retry logic
+    const generationPromise = retryWithBackoff(() =>
+      generationService.generateDemandLetter(generationInput)
+    );
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`AI generation timed out after ${GENERATION_TIMEOUT_MS}ms`));
+      }, GENERATION_TIMEOUT_MS);
     });
 
-    await job.progress(60);
+    let aiResult;
+    try {
+      aiResult = await Promise.race([generationPromise, timeoutPromise]);
+    } catch (error: any) {
+      // Build structured error for retry failures or timeouts
+      const structuredError: StructuredGenerationError = {
+        title: 'AI generation failed after retries',
+        reason: error.message || 'AI service unavailable or timed out',
+        probableCause: 'The AI service failed after multiple retry attempts. This could be due to service downtime, rate limiting, network issues, or request timeout.',
+        suggestedAction: 'Wait a moment and retry the generation. If the issue persists, check AI service status and network connectivity.',
+      };
+      throw structuredError;
+    }
+
+    await job.progress(50);
 
     // Calculate cost
     const cost = calculateUsageCost(
@@ -62,7 +199,29 @@ async function processGenerationJob(
       BEDROCK_CONFIG.modelId
     );
 
-    // Update letter in database
+    // Fetch existing letter to preserve metadata
+    const existingLetter = await letterService.getLetterById(
+      job.data.letterId,
+      job.data.firmId
+    );
+    const existingMetadata = (existingLetter.metadata as Record<string, any>) || {};
+
+    // Merge metadata instead of replacing
+    const mergedMetadata = {
+      ...existingMetadata,
+      // Preserve historical data
+      aiGenerated: existingMetadata.aiGenerated ?? true,
+      previousVersions: existingMetadata.previousVersions || [],
+      // Update with new generation data
+      usage: aiResult.usage,
+      cost,
+      generatedAt: new Date().toISOString(),
+      modelId: aiResult.metadata.modelId,
+      generationStatus: 'completed',
+      lastGeneratedAt: new Date().toISOString(),
+    };
+
+    // Update letter in database with merged metadata
     await letterService.updateLetter(
       job.data.letterId,
       job.data.firmId,
@@ -70,54 +229,45 @@ async function processGenerationJob(
       {
         content: { body: aiResult.letter },
         status: 'IN_REVIEW',
+        metadata: mergedMetadata,
+      }
+    );
+
+    await job.progress(70);
+
+    // Parallelize version creation and usage tracking
+    await Promise.all([
+      versionService.createLetterVersion(
+        job.data.letterId,
+        job.data.firmId,
+        job.data.userId,
+        {
+          content: { body: aiResult.letter },
+        }
+      ),
+      trackAIUsage({
+        userId: job.data.userId,
+        firmId: job.data.firmId,
+        operationType: 'generate',
+        modelId: aiResult.metadata.modelId,
+        inputTokens: aiResult.usage.inputTokens,
+        outputTokens: aiResult.usage.outputTokens,
+        cost,
+        requestId: aiResult.metadata.requestId,
+        letterId: job.data.letterId,
+        documentIds: job.data.documentIds,
         metadata: {
-          aiGenerated: true,
-          usage: aiResult.usage,
-          cost,
-          generatedAt: new Date().toISOString(),
-          modelId: aiResult.metadata.modelId,
-          generationStatus: 'completed',
+          caseType: job.data.caseType,
+          jobId: job.id,
+          processingTime: Date.now() - startTime,
         },
-      }
-    );
-
-    await job.progress(80);
-
-    // Create initial version
-    await versionService.createLetterVersion(
-      job.data.letterId,
-      job.data.firmId,
-      job.data.userId,
-      {
-        content: { body: aiResult.letter },
-      }
-    );
-
-    await job.progress(90);
-
-    // Track AI usage
-    await trackAIUsage({
-      userId: job.data.userId,
-      firmId: job.data.firmId,
-      operationType: 'generate',
-      modelId: aiResult.metadata.modelId,
-      inputTokens: aiResult.usage.inputTokens,
-      outputTokens: aiResult.usage.outputTokens,
-      cost,
-      requestId: aiResult.metadata.requestId,
-      letterId: job.data.letterId,
-      documentIds: job.data.documentIds,
-      metadata: {
-        caseType: job.data.caseType,
-        jobId: job.id,
-        processingTime: Date.now() - startTime,
-      },
-    });
+      }),
+    ]);
 
     await job.progress(100);
 
     const duration = Date.now() - startTime;
-    logger.info('Generation job completed', {
+    logger.info('[Refactor] Generation job completed', {
       jobId: job.id,
       letterId: job.data.letterId,
       duration,
@@ -135,16 +285,47 @@ async function processGenerationJob(
       generatedAt: new Date(),
     };
   } catch (error: any) {
-    const structuredError = buildGenerationError(error);
+    const structuredError = error instanceof Object && 'title' in error && 'reason' in error
+      ? error as StructuredGenerationError
+      : buildGenerationError(error);
 
-    logger.error('Generation job failed', {
+    logger.error('[Refactor] Generation job failed', {
       jobId: job.id,
       letterId: job.data.letterId,
       error: structuredError.reason,
+      stack: error.stack || (error instanceof Error ? error.stack : undefined),
       duration: Date.now() - startTime,
     });
 
-    // Update letter status to failed
+    // Fetch existing letter to preserve metadata
+    let existingMetadata: Record<string, any> = {};
+    try {
+      const existingLetter = await letterService.getLetterById(
+        job.data.letterId,
+        job.data.firmId
+      );
+      existingMetadata = (existingLetter.metadata as Record<string, any>) || {};
+    } catch (fetchError) {
+      logger.warn('[Refactor] Could not fetch existing letter metadata', {
+        letterId: job.data.letterId,
+        error: fetchError,
+      });
+    }
+
+    // Merge metadata instead of replacing
+    const mergedMetadata = {
+      ...existingMetadata,
+      // Preserve historical data
+      aiGenerated: existingMetadata.aiGenerated,
+      previousVersions: existingMetadata.previousVersions || [],
+      // Update with failure data
+      generationStatus: 'failed',
+      generationError: structuredError,
+      failedAt: new Date().toISOString(),
+      lastFailedAt: new Date().toISOString(),
+    };
+
+    // Update letter status to failed with merged metadata
     try {
       await letterService.updateLetter(
         job.data.letterId,
@@ -152,17 +333,14 @@ async function processGenerationJob(
         job.data.userId,
         {
           status: 'DRAFT',
-      metadata: {
-        generationStatus: 'failed',
-        generationError: structuredError,
-        failedAt: new Date().toISOString(),
-      },
+          metadata: mergedMetadata,
         }
       );
-    } catch (updateError) {
-      logger.error('Failed to update letter status after generation failure', {
+    } catch (updateError: any) {
+      logger.error('[Refactor] Failed to update letter status after generation failure', {
         letterId: job.data.letterId,
-        error: updateError,
+        error: updateError.message,
+        stack: updateError.stack,
       });
     }
 
@@ -178,6 +356,10 @@ async function processGenerationJob(
 
 /**
  * Start the generation worker
+ * 
+ * Note: Job deduplication should be handled at queue insertion time.
+ * When adding jobs to the queue, use: queue.add(name, data, { jobId: letterId })
+ * This ensures that duplicate generation requests for the same letter are prevented.
  */
 export function startGenerationWorker(): void {
   try {
@@ -326,7 +508,7 @@ function buildGenerationError(error: any): StructuredGenerationError {
     };
   }
 
-  if (errMsg.includes('AI service is currently busy') || errMsg.includes('request timed out')) {
+  if (errMsg.includes('AI service is currently busy') || errMsg.includes('request timed out') || errMsg.includes('timed out')) {
     return {
       title: 'AI service unavailable',
       reason: errMsg,
@@ -351,4 +533,3 @@ function buildGenerationError(error: any): StructuredGenerationError {
     reason: errMsg,
   };
 }
-

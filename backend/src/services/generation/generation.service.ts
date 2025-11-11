@@ -133,12 +133,14 @@ export async function startLetterGeneration(input: {
       maxTokens: input.maxTokens,
     };
 
-    // Add job to queue
+    // Add job to queue with letterId as jobId for deduplication
+    // This ensures that duplicate generation requests for the same letter are prevented
     const job = await addJob<LetterGenerationJobData>(
       QUEUE_NAMES.LETTER_GENERATION,
       jobData,
       {
         priority: 1, // Higher priority for user-initiated generations
+        jobId: letter.id, // Use letterId as jobId to prevent duplicate generations
       }
     );
 
