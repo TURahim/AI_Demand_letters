@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, CheckCircle2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -25,8 +25,11 @@ export function GenerationWizard() {
   const [jobId, setJobId] = useState<string | null>(null)
 
   // Load templates and documents
-  const { data: templatesData } = useApi(() => templatesApi.listTemplates())
-  const { data: documentsData } = useApi(() => documentsApi.listDocuments({ limit: 100 }))
+  const fetchTemplates = useCallback(() => templatesApi.listTemplates(), [])
+  const fetchDocuments = useCallback(() => documentsApi.listDocuments({ limit: 100 }), [])
+
+  const { data: templatesData } = useApi(fetchTemplates)
+  const { data: documentsData } = useApi(fetchDocuments)
 
   const [formData, setFormData] = useState({
     // Step 1: Case Information

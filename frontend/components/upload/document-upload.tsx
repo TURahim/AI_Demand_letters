@@ -65,9 +65,14 @@ export function DocumentUpload() {
         continue
       }
 
-      const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
+      const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+      ]
       if (!validTypes.includes(file.type)) {
-        toast.error(`${file.name} is not a supported format (PDF, DOCX, TXT)`)
+        toast.error(`${file.name} is not a supported format (PDF, DOC, DOCX, TXT)`)
         continue
       }
 

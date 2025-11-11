@@ -54,12 +54,13 @@ export function DocumentList({
   }
 
   const handleDownload = async (id: string) => {
-    const blob = await documentsApi.downloadDocument(id)
-    if (blob) {
+    const result = await documentsApi.downloadDocument(id)
+    if (result) {
+      const { blob, fileName } = result
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `document-${id}.pdf`
+      a.download = fileName || `document-${id}`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)

@@ -1,7 +1,7 @@
 # Engineering Roadmap - Steno Demand Letter Generator
 
-**Status**: Frontend ✅ Complete | Backend Foundation ✅ Complete (PR-01, 02, 03, 05) | Core Features 🚧 In Progress  
-**Timeline**: ~35 dev days completed | ~40-70 dev days remaining  
+**Status**: Core Platform ✅ Complete (PR-01 through PR-08) | Bug Fixes ✅ | Polish & Advanced Features 🚧 Remaining  
+**Timeline**: ~45 dev days completed | ~30-55 dev days remaining  
 **Team**: 2-3 developers
 
 ---
@@ -27,7 +27,7 @@
 | PR-05 | Template Management | Medium | 4-5 | PR-01, PR-02 | ✅ Complete |
 | PR-06 | Letter Generation Engine | High | 7-9 | PR-03, PR-04, PR-05 | ✅ Complete |
 | PR-07 | Frontend Integration | Medium | 5-6 | PR-02, PR-03, PR-05 | ✅ Complete |
-| PR-08 | Letter Editor Backend | Medium | 4-5 | PR-06 | ⏳ Not Started |
+| PR-08 | Letter Editor Backend | Medium | 4-5 | PR-06 | ✅ Complete |
 | PR-09 | Word Export Service | Medium | 4-5 | PR-06 | ⏳ Not Started |
 | PR-10 | Real-time Collaboration (P1) | High | 8-10 | PR-08 | ⏳ Optional |
 | PR-11 | Analytics & Dashboard | Medium | 4-5 | PR-02 | ⏳ Not Started |
@@ -436,39 +436,114 @@ Connect all frontend pages to backend APIs.
 ---
 
 ## PR-08: Letter Editor Backend
-**Complexity**: Medium | **Days**: 4-5 | **Dependencies**: PR-06
+**Complexity**: Medium | **Days**: 4-5 | **Dependencies**: PR-06 | **Status**: ✅ COMPLETE
 
 ### Objectives
 Build backend support for real-time editor features.
 
+**Completed**: All tasks ✅ - Auto-save service implemented, comment system complete with 8 endpoints, frontend editor with auto-save and comments sidebar
+
 ### Tasks
 
 #### 1. Auto-save Service
-- [ ] `/backend/src/services/letters/autosave.service.ts` — Debounced auto-save
-- [ ] Update letter endpoints to support incremental updates
+- [x] `/backend/src/services/letters/autosave.service.ts` — Debounced auto-save (2-second debounce)
+- [x] Update letter endpoints to support incremental updates
+  - `PATCH /api/v1/letters/:id/autosave` — Debounced auto-save
+  - `POST /api/v1/letters/:id/save` — Force save with versioning
 
 #### 2. Comments System
-- [ ] `/backend/src/services/comments/comment.service.ts` — Comment CRUD
-- [ ] `/backend/src/services/comments/comment.controller.ts` — Comment endpoints
-- [ ] `/backend/src/services/comments/comment.routes.ts` — Comment routes
+- [x] `/backend/src/services/comments/comment.service.ts` — Comment CRUD with threaded replies
+- [x] `/backend/src/services/comments/comment.controller.ts` — Comment endpoints with Zod validation
+- [x] `/backend/src/services/comments/comment.routes.ts` — Comment routes with firm isolation
+- [x] `/backend/prisma/schema.prisma` — Comment model with position tracking
 
 #### 3. API Endpoints
 ```
-POST   /api/letters/:id/comments      — Add comment
-GET    /api/letters/:id/comments      — Get comments
-PUT    /api/comments/:id              — Update comment
-DELETE /api/comments/:id              — Delete comment
-POST   /api/comments/:id/resolve      — Resolve comment
+POST   /api/v1/letters/:id/comments      — Add comment
+GET    /api/v1/letters/:id/comments      — Get comments
+GET    /api/v1/letters/:id/comments/count — Get comment count
+POST   /api/v1/comments                   — Create comment
+GET    /api/v1/comments/:id               — Get comment
+PUT    /api/v1/comments/:id               — Update comment
+DELETE /api/v1/comments/:id               — Delete comment
+POST   /api/v1/comments/:id/resolve       — Resolve comment
+POST   /api/v1/comments/:id/unresolve     — Unresolve comment
 ```
 
 #### 4. Frontend Integration
-- [ ] Update `/frontend/components/editor/letter-editor.tsx` — Auto-save
-- [ ] Add comments sidebar to editor
+- [x] Update `/frontend/components/editor/letter-editor.tsx` — Auto-save with status indicator
+- [x] Add comments sidebar to editor (`/frontend/components/editor/comments-sidebar.tsx`)
+- [x] `/frontend/src/api/comments.api.ts` — Comments API client
+- [x] Responsive 3-column layout (editor + refinement + comments)
+
+#### 5. Testing
+- [x] `/backend/src/tests/integration/comments.test.ts` — 30+ test cases for comment system
+- [x] Build passing: Backend TypeScript ✅ | Frontend Next.js ✅
 
 **Success Criteria**:
-- ✅ Auto-save works without data loss
-- ✅ Comments can be added/resolved
+- ✅ Auto-save works without data loss (2-second debounce)
+- ✅ Comments can be added/resolved with threading
 - ✅ Version history tracks changes
+- ✅ Firm-level isolation enforced
+- ✅ Integration tests passing
+
+---
+
+## Bug Fixes & Improvements (Post PR-08)
+**Status**: ✅ COMPLETE
+
+### Document Upload & Download Fixes
+
+#### 1. Fixed Document Upload (CORS & API Issues)
+- **Problem**: Upload failing with 400 Bad Request and CORS preflight errors
+- **Root Cause**: 
+  - Frontend sending `fileType` but backend expecting `contentType`
+  - S3 bucket missing CORS configuration for browser uploads
+- **Solution**:
+  - Fixed API parameter naming: `fileType` → `contentType` in both presigned URL and complete upload
+  - Added CORS configuration to S3 bucket for `http://localhost:3000`
+  - Updated client validation to support `.doc` files
+- **Files Changed**:
+  - `frontend/src/api/documents.api.ts` — Fixed parameter names
+  - `frontend/components/upload/document-upload.tsx` — Added `.doc` MIME type
+  - S3 bucket CORS policy applied via AWS CLI
+
+#### 2. Fixed Document Download (Binary vs JSON)
+- **Problem**: Downloaded files only ~600 bytes, corrupted PDFs
+- **Root Cause**: Frontend fetching `/documents/:id/download` endpoint directly, receiving JSON response instead of binary file
+- **Solution**:
+  - Backend returns presigned S3 download URL
+  - Frontend fetches from presigned URL to get actual file binary
+  - Preserves original filename from backend response
+- **Files Changed**:
+  - `frontend/src/api/documents.api.ts` — Two-step download (get URL, fetch binary)
+  - `frontend/components/documents/document-list.tsx` — Use returned filename
+
+#### 3. Fixed UI Overflow in Document Cards
+- **Problem**: Long filenames overflow card boundaries
+- **Solution**:
+  - Applied `line-clamp-2` and `break-words` to title
+  - Added `flex-wrap` to status/size badge row
+  - Set `max-w-full` constraint on container
+- **Files Changed**:
+  - `frontend/components/documents/document-card.tsx`
+
+#### 4. Fixed "Maximum Update Depth Exceeded" Error
+- **Problem**: Generation wizard causing infinite re-render loop
+- **Root Cause**: `useApi` hook receiving new function references on every render, triggering effect loop
+- **Solution**:
+  - Memoized API calls with `useCallback` in generation wizard
+  - Stable references prevent unnecessary effect re-triggers
+- **Files Changed**:
+  - `frontend/components/generation/generation-wizard.tsx` — Memoized `fetchTemplates` and `fetchDocuments`
+
+### Testing Results
+- ✅ Backend TypeScript compilation passing
+- ✅ Frontend Next.js build passing  
+- ✅ Document upload works for PDF, DOC, DOCX, TXT
+- ✅ Document download returns valid binary files
+- ✅ No console errors on generation page
+- ✅ UI responsive and clean
 
 ---
 

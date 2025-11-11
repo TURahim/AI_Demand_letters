@@ -31,10 +31,10 @@ export const documentsApi = {
   /**
    * Get presigned URL for upload
    */
-  async getPresignedUrl(fileName: string, fileType: string, fileSize: number): Promise<ApiResponse<PresignedUrlResponse>> {
+  async getPresignedUrl(fileName: string, contentType: string, fileSize: number): Promise<ApiResponse<PresignedUrlResponse>> {
     return apiClient.post<PresignedUrlResponse>('/upload/presigned-url', {
       fileName,
-      fileType,
+      contentType,
       fileSize,
     });
   },
@@ -45,14 +45,14 @@ export const documentsApi = {
   async completeUpload(
     s3Key: string,
     fileName: string,
-    fileType: string,
+    contentType: string,
     fileSize: number,
     fileHash: string
   ): Promise<ApiResponse<{ document: Document }>> {
     return apiClient.post<{ document: Document }>('/upload/complete', {
       s3Key,
       fileName,
-      fileType,
+      contentType,
       fileSize,
       fileHash,
     });
@@ -94,23 +94,31 @@ export const documentsApi = {
   /**
    * Download document
    */
-  async downloadDocument(id: string): Promise<Blob | null> {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-    const headers: HeadersInit = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+  async downloadDocument(
+    id: string
+  ): Promise<{ blob: Blob; fileName: string; expiresIn: number } | null> {
+    const response = await apiClient.get<{
+      downloadUrl: string;
+      fileName: string;
+      expiresIn: number;
+    }>(`/documents/${id}/download`);
+
+    if (response.status !== 'success' || !response.data) {
+      return null;
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/documents/${id}/download`, {
-        headers,
-      });
-
-      if (!response.ok) {
+      const fileResponse = await fetch(response.data.downloadUrl);
+      if (!fileResponse.ok) {
         return null;
       }
 
-      return await response.blob();
+      const blob = await fileResponse.blob();
+      return {
+        blob,
+        fileName: response.data.fileName,
+        expiresIn: response.data.expiresIn,
+      };
     } catch {
       return null;
     }

@@ -288,6 +288,22 @@ See [Engineering Roadmap](docs/Initialdocs/ENGINEERING_ROADMAP.md) for complete 
   - Save status indicator with visual feedback
   - Comments API client with TypeScript types
 
+**Bug Fixes & Improvements (Post PR-08)** - Complete ✅
+- **Document Upload & Download:**
+  - Fixed CORS preflight failures on S3 bucket uploads
+  - Fixed API parameter naming (fileType → contentType) for presigned URLs
+  - Fixed download returning JSON instead of binary (now uses presigned download URLs)
+  - Added support for .doc files alongside PDF, DOCX, TXT
+  - Download preserves original filename
+- **UI Fixes:**
+  - Fixed document card title overflow with line-clamp and word-break
+  - Fixed status/size badges wrapping properly
+- **Performance:**
+  - Fixed "Maximum update depth exceeded" in generation wizard
+  - Memoized API calls in useApi hook dependencies
+  - Eliminated infinite render loops on /generation page
+- **All builds passing:** Backend TypeScript ✅ | Frontend Next.js ✅
+
 ### Upcoming 📅
 - PR-09: Word Export Service (DOCX generation with firm branding)
 - PR-10: Real-time Collaboration (Optional - Yjs/TipTap for Google Docs-style editing)
