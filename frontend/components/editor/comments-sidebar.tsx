@@ -34,7 +34,7 @@ export function CommentsSidebar({ letterId, currentUserId }: CommentsSidebarProp
     () => commentsApi.getComments(letterId, { includeResolved: showResolved }),
     [letterId, showResolved]
   );
-  const { data: commentsData, loading, refetch } = useApi(getComments)
+  const { data: commentsData, loading, execute: fetchComments } = useApi(getComments)
 
   const { mutate: createComment } = useMutation(commentsApi.createComment)
   const { mutate: updateComment } = useMutation(commentsApi.updateComment)
@@ -46,8 +46,8 @@ export function CommentsSidebar({ letterId, currentUserId }: CommentsSidebarProp
 
   // Refresh comments when showResolved changes
   useEffect(() => {
-    refetch()
-  }, [showResolved, refetch])
+    fetchComments()
+  }, [showResolved, fetchComments])
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return
@@ -59,7 +59,7 @@ export function CommentsSidebar({ letterId, currentUserId }: CommentsSidebarProp
     if (result.success) {
       setNewComment('')
       toast.success('Comment added')
-      refetch()
+      fetchComments()
     } else {
       toast.error(result.error || 'Failed to add comment')
     }
@@ -77,7 +77,7 @@ export function CommentsSidebar({ letterId, currentUserId }: CommentsSidebarProp
       setReplyContent('')
       setReplyingTo(null)
       toast.success('Reply added')
-      refetch()
+      fetchComments()
     } else {
       toast.error(result.error || 'Failed to add reply')
     }
@@ -94,7 +94,7 @@ export function CommentsSidebar({ letterId, currentUserId }: CommentsSidebarProp
       setEditingId(null)
       setEditContent('')
       toast.success('Comment updated')
-      refetch()
+      fetchComments()
     } else {
       toast.error(result.error || 'Failed to update comment')
     }
@@ -107,7 +107,7 @@ export function CommentsSidebar({ letterId, currentUserId }: CommentsSidebarProp
 
     if (result.success) {
       toast.success('Comment deleted')
-      refetch()
+      fetchComments()
     } else {
       toast.error(result.error || 'Failed to delete comment')
     }
@@ -118,7 +118,7 @@ export function CommentsSidebar({ letterId, currentUserId }: CommentsSidebarProp
 
     if (result.success) {
       toast.success('Comment resolved')
-      refetch()
+      fetchComments()
     } else {
       toast.error(result.error || 'Failed to resolve comment')
     }
