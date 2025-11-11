@@ -1,0 +1,350 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Core Models
+// ============================================
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  passwordHash      String   @map("password_hash")
+  firstName         String   @map("first_name")
+  lastName          String   @map("last_name")
+  role              UserRole @default(ASSOCIATE)
+  firmId            String   @map("firm_id")
+  isActive          Boolean  @default(true) @map("is_active")
+  lastLoginAt       DateTime? @map("last_login_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  firm              Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  documents         Document[]
+  templates         Template[]
+  letters           Letter[]
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  collaborations    Collaboration[]
+
+  @@index([firmId])
+  @@index([email])
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  PARTNER
+  ASSOCIATE
+  PARALEGAL
+}
+
+model Firm {
+  id                String   @id @default(uuid())
+  name              String
+  address           String?
+  phone             String?
+  email             String?
+  logo              String?
+  encryptionKey     String   @map("encryption_key") // Encrypted with KMS
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users             User[]
+  documents         Document[]
+  templates         Template[]
+  letters           Letter[]
+
+  @@map("firms")
+}
+
+model Session {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  refreshToken      String   @unique @map("refresh_token")
+  expiresAt         DateTime @map("expires_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@map("sessions")
+}
+
+// ============================================
+// Document Management
+// ============================================
+
+model Document {
+  id                String         @id @default(uuid())
+  firmId            String         @map("firm_id")
+  uploadedBy        String         @map("uploaded_by")
+  fileName          String         @map("file_name")
+  fileSize          Int            @map("file_size")
+  mimeType          String         @map("mime_type")
+  s3Key             String         @map("s3_key")
+  s3Bucket          String         @map("s3_bucket")
+  fileHash          String         @map("file_hash") // SHA256 for integrity
+  status            DocumentStatus @default(PENDING)
+  extractedText     String?        @map("extracted_text") @db.Text
+  metadata          Json?
+  virusScanStatus   String?        @map("virus_scan_status")
+  virusScanResult   Json?          @map("virus_scan_result")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  firm              Firm           @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  uploader          User           @relation(fields: [uploadedBy], references: [id])
+  processingJobs    ProcessingJob[]
+  letters           Letter[]
+
+  @@index([firmId])
+  @@index([uploadedBy])
+  @@index([status])
+  @@index([fileHash])
+  @@map("documents")
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  QUARANTINED
+}
+
+model ProcessingJob {
+  id                String            @id @default(uuid())
+  documentId        String            @map("document_id")
+  jobType           ProcessingJobType @map("job_type")
+  status            JobStatus         @default(PENDING)
+  progress          Int               @default(0)
+  result            Json?
+  error             String?           @db.Text
+  startedAt         DateTime?         @map("started_at")
+  completedAt       DateTime?         @map("completed_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  document          Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([status])
+  @@map("processing_jobs")
+}
+
+enum ProcessingJobType {
+  OCR
+  TEXT_EXTRACTION
+  METADATA_EXTRACTION
+  VIRUS_SCAN
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ============================================
+// Templates
+// ============================================
+
+model Template {
+  id                String         @id @default(uuid())
+  firmId            String         @map("firm_id")
+  createdBy         String         @map("created_by")
+  name              String
+  description       String?        @db.Text
+  category          String?
+  content           Json           // Structured template content
+  variables         Json           // Template variable definitions
+  isPublic          Boolean        @default(false) @map("is_public")
+  isActive          Boolean        @default(true) @map("is_active")
+  usageCount        Int            @default(0) @map("usage_count")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  firm              Firm           @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  creator           User           @relation(fields: [createdBy], references: [id])
+  letters           Letter[]
+
+  @@index([firmId])
+  @@index([createdBy])
+  @@index([isPublic])
+  @@map("templates")
+}
+
+// ============================================
+// Letter Generation
+// ============================================
+
+model Letter {
+  id                String         @id @default(uuid())
+  firmId            String         @map("firm_id")
+  createdBy         String         @map("created_by")
+  documentId        String?        @map("document_id")
+  templateId        String?        @map("template_id")
+  title             String
+  content           Json           // Rich text content (TipTap JSON)
+  status            LetterStatus   @default(DRAFT)
+  version           Int            @default(1)
+  metadata          Json?
+  aiPrompt          String?        @map("ai_prompt") @db.Text
+  aiResponse        String?        @map("ai_response") @db.Text
+  exportedAt        DateTime?      @map("exported_at")
+  exportFormat      String?        @map("export_format")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  firm              Firm           @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  creator           User           @relation(fields: [createdBy], references: [id])
+  document          Document?      @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  template          Template?      @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  collaborations    Collaboration[]
+  versions          LetterVersion[]
+  exports           LetterExport[]
+
+  @@index([firmId])
+  @@index([createdBy])
+  @@index([status])
+  @@index([documentId])
+  @@index([templateId])
+  @@map("letters")
+}
+
+enum LetterStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  SENT
+  ARCHIVED
+}
+
+model LetterVersion {
+  id                String   @id @default(uuid())
+  letterId          String   @map("letter_id")
+  version           Int
+  content           Json
+  changes           Json?
+  createdBy         String   @map("created_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  letter            Letter   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  @@unique([letterId, version])
+  @@index([letterId])
+  @@map("letter_versions")
+}
+
+model LetterExport {
+  id                String       @id @default(uuid())
+  letterId          String       @map("letter_id")
+  format            ExportFormat
+  s3Key             String       @map("s3_key")
+  s3Bucket          String       @map("s3_bucket")
+  fileSize          Int          @map("file_size")
+  downloadCount     Int          @default(0) @map("download_count")
+  expiresAt         DateTime?    @map("expires_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  // Relations
+  letter            Letter       @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  @@index([letterId])
+  @@map("letter_exports")
+}
+
+enum ExportFormat {
+  PDF
+  DOCX
+  HTML
+}
+
+// ============================================
+// Collaboration
+// ============================================
+
+model Collaboration {
+  id                String             @id @default(uuid())
+  letterId          String             @map("letter_id")
+  userId            String             @map("user_id")
+  role              CollaborationRole  @default(VIEWER)
+  isActive          Boolean            @default(true) @map("is_active")
+  lastAccessedAt    DateTime?          @map("last_accessed_at")
+  createdAt         DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  letter            Letter             @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([letterId, userId])
+  @@index([letterId])
+  @@index([userId])
+  @@map("collaborations")
+}
+
+enum CollaborationRole {
+  OWNER
+  EDITOR
+  COMMENTER
+  VIEWER
+}
+
+// ============================================
+// Audit & Monitoring
+// ============================================
+
+model AuditLog {
+  id                String   @id @default(uuid())
+  userId            String?  @map("user_id")
+  firmId            String?  @map("firm_id")
+  action            String
+  resource          String
+  resourceId        String?  @map("resource_id")
+  metadata          Json?
+  ipAddress         String?  @map("ip_address")
+  userAgent         String?  @map("user_agent")
+  timestamp         DateTime @default(now())
+
+  // Relations
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([firmId])
+  @@index([action])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+model SystemMetric {
+  id                String   @id @default(uuid())
+  metricName        String   @map("metric_name")
+  metricValue       Float    @map("metric_value")
+  unit              String?
+  dimensions        Json?
+  timestamp         DateTime @default(now())
+
+  @@index([metricName])
+  @@index([timestamp])
+  @@map("system_metrics")
+}
+

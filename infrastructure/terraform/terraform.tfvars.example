@@ -1,0 +1,32 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and fill in your values
+
+aws_region  = "us-east-1"
+environment = "dev"
+
+# Networking
+vpc_cidr = "10.0.0.0/16"
+
+# Database
+db_instance_class    = "db.t3.micro"
+db_allocated_storage = 20
+db_name              = "steno_dev"
+db_username          = "steno_admin"
+
+# Application secrets (use AWS Secrets Manager in production)
+jwt_secret = "your-jwt-secret-key-change-me"
+
+# Lambda configuration
+lambda_memory_size = 512
+lambda_timeout     = 30
+
+# Feature flags
+enable_cloudwatch_logs = true
+enable_xray            = false
+
+# Additional tags
+additional_tags = {
+  Owner = "DevTeam"
+  CostCenter = "Engineering"
+}
+
