@@ -19,6 +19,7 @@ import generationRoutes from './services/generation/generation.routes';
 import letterRoutes from './services/letters/letter.routes';
 import commentRoutes from './services/comments/comment.routes';
 import exportRoutes from './services/export/export.routes';
+import analyticsRoutes from './services/analytics/analytics.routes';
 
 // Create Express app
 const app: Application = express();
@@ -85,6 +86,7 @@ app.use(`/api/${config.apiVersion}/generation`, generationRoutes);
 app.use(`/api/${config.apiVersion}/letters`, letterRoutes);
 app.use(`/api/${config.apiVersion}/comments`, commentRoutes);
 app.use(`/api/${config.apiVersion}/exports`, exportRoutes);
+app.use(`/api/${config.apiVersion}/analytics`, analyticsRoutes);
 
 // ============================================
 // Error Handling

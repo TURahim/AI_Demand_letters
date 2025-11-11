@@ -6,16 +6,16 @@ import { StatsCard } from "@/components/dashboard/stats-card"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { ActivityFeed } from "@/components/dashboard/activity-feed"
 import { UsageChart } from "@/components/dashboard/usage-chart"
-import { FileText, Mail, TrendingUp } from "lucide-react"
-import { lettersApi } from '@/src/api/letters.api'
+import { FileText, Mail, TrendingUp, Upload } from "lucide-react"
+import { analyticsApi } from '@/src/api/analytics.api'
 import { useApi } from '@/src/hooks/useApi'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardPage() {
-  const getStats = useCallback(() => lettersApi.getStats(), [])
-  const { data: statsData, loading: statsLoading } = useApi(getStats)
+  const getMetrics = useCallback(() => analyticsApi.getDashboardMetrics(), [])
+  const { data: metricsData, loading: metricsLoading } = useApi(getMetrics)
 
-  const stats = statsData?.stats
+  const metrics = metricsData?.metrics
 
   return (
     <AppLayout>
@@ -29,7 +29,7 @@ export default function DashboardPage() {
 
           {/* Stats Grid */}
           <div className="grid md:grid-cols-4 gap-4 mb-8">
-            {statsLoading ? (
+            {metricsLoading ? (
               <>
                 {[...Array(4)].map((_, i) => (
                   <Skeleton key={i} className="h-24 w-full" />
@@ -38,30 +38,30 @@ export default function DashboardPage() {
             ) : (
               <>
                 <StatsCard
-                  title="Total Letters"
-                  value={stats?.total?.toString() || '0'}
-                  change={`${stats?.byStatus?.SENT || 0} sent`}
-                  icon={<FileText className="w-5 h-5" />}
+                  title="Total Documents"
+                  value={metrics?.totalDocuments?.toString() || '0'}
+                  change={`${metrics?.documentsThisMonth || 0} this month`}
+                  icon={<Upload className="w-5 h-5" />}
                   variant="primary"
                 />
                 <StatsCard
-                  title="This Month"
-                  value={stats?.thisMonth?.toString() || '0'}
-                  change={`${stats?.thisWeek || 0} this week`}
-                  icon={<Mail className="w-5 h-5" />}
+                  title="Total Letters"
+                  value={metrics?.totalLetters?.toString() || '0'}
+                  change={`${metrics?.lettersThisMonth || 0} this month`}
+                  icon={<FileText className="w-5 h-5" />}
                   variant="secondary"
                 />
                 <StatsCard
-                  title="Draft Letters"
-                  value={stats?.byStatus?.DRAFT?.toString() || '0'}
-                  change={`${stats?.byStatus?.IN_REVIEW || 0} in review`}
-                  icon={<FileText className="w-5 h-5" />}
+                  title="Templates"
+                  value={metrics?.totalTemplates?.toString() || '0'}
+                  change="Available"
+                  icon={<Mail className="w-5 h-5" />}
                   variant="accent"
                 />
                 <StatsCard
-                  title="Approved"
-                  value={stats?.byStatus?.APPROVED?.toString() || '0'}
-                  change={`${stats?.byStatus?.SENT || 0} sent`}
+                  title="Active Users"
+                  value={metrics?.activeUsers?.toString() || '0'}
+                  change="Last 30 days"
                   icon={<TrendingUp className="w-5 h-5" />}
                   variant="primary"
                 />
@@ -78,12 +78,12 @@ export default function DashboardPage() {
           <div className="grid md:grid-cols-3 gap-6">
             {/* Usage Chart */}
             <div className="md:col-span-2">
-              <UsageChart />
+              <UsageChart data={metrics?.dailyStats} />
             </div>
 
             {/* Activity Feed */}
             <div className="md:col-span-1">
-              <ActivityFeed />
+              <ActivityFeed activities={metrics?.recentActivity} />
             </div>
           </div>
         </div>
