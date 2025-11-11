@@ -200,37 +200,61 @@ export function startGenerationWorker(): void {
         return await processGenerationJob(job);
       });
 
-      logger.info('Letter generation worker started successfully', {
+      logger.info('✓ Letter generation worker started successfully', {
         concurrency: 2,
         queueName: QUEUE_NAMES.LETTER_GENERATION,
       });
     };
 
-    // Check Redis status after a small delay to ensure connection completes
-    const checkAndStart = () => {
-      const client = (queue as any).client;
-      if (client && client.status === 'ready') {
-        logger.info('Redis is ready, starting worker processor', {
-          queueName: QUEUE_NAMES.LETTER_GENERATION,
-        });
-        startProcessor();
-      } else {
-        logger.info('Waiting for Redis connection...', {
-          queueName: QUEUE_NAMES.LETTER_GENERATION,
-          currentStatus: client?.status || 'unknown',
-        });
-      }
-    };
-
-    // Check immediately after event loop tick
-    setImmediate(checkAndStart);
-
-    // Also listen for ready event in case connection isn't complete yet
-    queue.on('ready', () => {
-      logger.info('Queue ready event fired', {
+    // Aggressive multi-strategy approach to ensure worker starts
+    const client = (queue as any).client;
+    
+    // Strategy 1: Check immediately if already ready
+    if (client && client.status === 'ready') {
+      logger.info('Redis already ready (immediate check), starting worker', {
         queueName: QUEUE_NAMES.LETTER_GENERATION,
       });
       startProcessor();
+    }
+    
+    // Strategy 2: Check after setImmediate
+    setImmediate(() => {
+      if (!processorStarted && client && client.status === 'ready') {
+        logger.info('Redis ready (setImmediate check), starting worker', {
+          queueName: QUEUE_NAMES.LETTER_GENERATION,
+        });
+        startProcessor();
+      }
+    });
+    
+    // Strategy 3: Check after 100ms delay
+    setTimeout(() => {
+      if (!processorStarted && client && client.status === 'ready') {
+        logger.info('Redis ready (100ms check), starting worker', {
+          queueName: QUEUE_NAMES.LETTER_GENERATION,
+        });
+        startProcessor();
+      }
+    }, 100);
+    
+    // Strategy 4: Check after 500ms delay
+    setTimeout(() => {
+      if (!processorStarted && client && client.status === 'ready') {
+        logger.info('Redis ready (500ms check), starting worker', {
+          queueName: QUEUE_NAMES.LETTER_GENERATION,
+        });
+        startProcessor();
+      }
+    }, 500);
+    
+    // Strategy 5: Listen for ready event
+    queue.on('ready', () => {
+      if (!processorStarted) {
+        logger.info('Redis ready (event), starting worker', {
+          queueName: QUEUE_NAMES.LETTER_GENERATION,
+        });
+        startProcessor();
+      }
     });
 
     // Handle worker-level errors
@@ -243,6 +267,7 @@ export function startGenerationWorker(): void {
 
     logger.info('Letter generation worker initializing', {
       queueName: QUEUE_NAMES.LETTER_GENERATION,
+      redisStatus: client?.status || 'unknown',
     });
   } catch (error: any) {
     logger.error('Failed to start generation worker:', {
