@@ -30,33 +30,61 @@ async function processGenerationJob(
     const damages = job.data.damages || {};
     const defendantAddress = job.data.defendantAddress || 'Address not provided';
 
-    const aiResult = await generationService.generateDemandLetter({
-      caseType: job.data.caseType,
-      incidentDate: job.data.incidentDate,
-      incidentDescription: job.data.incidentDescription,
-      location: job.data.location,
-      clientName: job.data.clientName,
-      clientContact: job.data.clientContact,
-      defendantName: job.data.defendantName,
-      defendantAddress,
-      damages,
-      documentIds: job.data.documentIds,
-      firmId: job.data.firmId,
-      templateContent: job.data.templateContent,
-      specialInstructions: job.data.specialInstructions,
-      tone: job.data.tone,
-      temperature: job.data.temperature,
-      maxTokens: job.data.maxTokens,
-    });
+    let aiResult;
+    try {
+      aiResult = await generationService.generateDemandLetter({
+        caseType: job.data.caseType,
+        incidentDate: job.data.incidentDate,
+        incidentDescription: job.data.incidentDescription,
+        location: job.data.location,
+        clientName: job.data.clientName,
+        clientContact: job.data.clientContact,
+        defendantName: job.data.defendantName,
+        defendantAddress,
+        damages,
+        documentIds: job.data.documentIds,
+        firmId: job.data.firmId,
+        templateContent: job.data.templateContent,
+        specialInstructions: job.data.specialInstructions,
+        tone: job.data.tone,
+        temperature: job.data.temperature,
+        maxTokens: job.data.maxTokens,
+      });
+    } catch (aiError: any) {
+      logger.error('AI generation failed, using fallback letter content', {
+        jobId: job.id,
+        letterId: job.data.letterId,
+        error: aiError.message,
+      });
+
+      const fallbackLetter = buildFallbackLetter(job.data, defendantAddress, damages);
+
+      aiResult = {
+        letter: fallbackLetter,
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+        },
+        metadata: {
+          modelId: 'fallback-template',
+          requestId: `fallback-${job.id}`,
+          generatedAt: new Date(),
+        },
+      };
+    }
 
     await job.progress(60);
 
     // Calculate cost
-    const cost = calculateUsageCost(
-      aiResult.usage.inputTokens,
-      aiResult.usage.outputTokens,
-      BEDROCK_CONFIG.modelId
-    );
+    const cost =
+      aiResult.usage.inputTokens > 0 || aiResult.usage.outputTokens > 0
+        ? calculateUsageCost(
+            aiResult.usage.inputTokens,
+            aiResult.usage.outputTokens,
+            BEDROCK_CONFIG.modelId
+          )
+        : 0;
 
     // Update letter in database
     await letterService.updateLetter(
@@ -202,6 +230,75 @@ export function startGenerationWorker(): void {
     // Don't throw - allow server to start even if Redis is unavailable
     logger.warn('Server will start without background job processing. Redis may not be available.');
   }
+}
+
+function buildFallbackLetter(
+  data: LetterGenerationJobData,
+  defendantAddress: string | undefined,
+  damages: LetterGenerationJobData['damages'] | undefined
+): string {
+  const incidentDate = data.incidentDate
+    ? new Date(data.incidentDate).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : 'the incident date';
+
+  const damagesLines: string[] = [];
+
+  if (damages) {
+    if (damages.medical) {
+      damagesLines.push(`• Medical expenses: $${damages.medical.toLocaleString()}`);
+    }
+    if (damages.lostWages) {
+      damagesLines.push(`• Lost wages: $${damages.lostWages.toLocaleString()}`);
+    }
+    if (damages.propertyDamage) {
+      damagesLines.push(`• Property damage: $${damages.propertyDamage.toLocaleString()}`);
+    }
+    if (damages.painAndSuffering) {
+      damagesLines.push(
+        `• Pain and suffering: $${damages.painAndSuffering.toLocaleString()}`
+      );
+    }
+
+    if (damages.itemizedMedical?.length) {
+      damagesLines.push(
+        '• Itemized medical treatment:',
+        ...damages.itemizedMedical.map(
+          (item) => `  - ${item.description}: $${item.amount.toLocaleString()}`
+        )
+      );
+    }
+  }
+
+  const damagesSection =
+    damagesLines.length > 0
+      ? `The following damages have been incurred and documented:\n${damagesLines.join('\n')}\n\n`
+      : '';
+
+  const documentsSection =
+    data.documentIds && data.documentIds.length > 0
+      ? `Supporting documentation (${data.documentIds.length} documents) has been provided and is available upon request.\n\n`
+      : '';
+
+  return `Dear ${data.defendantName},
+
+We represent ${data.clientName} in connection with the ${data.caseType.toLowerCase()} that occurred on ${incidentDate}.
+
+Summary of Incident:
+${data.incidentDescription}
+
+Location of Incident: ${data.location || 'Not specified'}
+Defendant Address: ${defendantAddress || 'Not provided'}
+
+${damagesSection}${documentsSection}Please contact our office within 14 days to discuss resolution. If we do not receive a response within this timeframe, we will proceed with all available legal remedies.
+
+Sincerely,
+
+${data.clientName}'s Legal Team
+Steno AI`;
 }
 
 /**
