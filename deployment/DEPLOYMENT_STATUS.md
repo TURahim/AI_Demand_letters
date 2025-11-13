@@ -95,16 +95,20 @@ AWS_SECRET_ACCESS_KEY=<your-secret-key>
 
 ## ⏭️ Next Steps
 
-### 5. AWS Secrets Manager (Pending)
-- [ ] Create secret for database credentials
-- [ ] Create secret for Redis endpoint
-- [ ] Create secret for S3 bucket names
-- [ ] Update backend to read from Secrets Manager
+### 5. AWS Secrets Manager (✅ Complete)
+- [x] Create secret for database credentials
+- [x] Create secret for Redis endpoint
+- [x] Create secret for S3 bucket names
+- [x] Create secret for application keys (JWT, encryption)
 
-### 6. Backend Deployment (Pending)
-- [ ] Build Docker image for backend
-- [ ] Push to Amazon ECR
-- [ ] Deploy to AWS App Runner or ECS Fargate
+**Cost:** ~$2/month for 4 secrets
+
+### 6. Backend Deployment (🔄 In Progress)
+- [x] Create IAM roles (backend + App Runner access)
+- [x] Build Docker image for backend
+- [x] Create ECR repository
+- [x] Push image to Amazon ECR
+- [ ] Deploy to AWS App Runner
 - [ ] Configure environment variables
 - [ ] Set up health checks
 - [ ] Configure auto-scaling
@@ -189,7 +193,31 @@ aws s3 rm s3://steno-prod-exports-971422717446 --recursive
 aws s3 rb s3://steno-prod-exports-971422717446
 ```
 
+## 📋 New Resources Created
+
+### 5. AWS Secrets Manager
+- **Database Secret:** `steno-prod/database` (credentials + connection string)
+- **Redis Secret:** `steno-prod/redis` (host, port, URL)
+- **S3 Secret:** `steno-prod/s3` (bucket names)
+- **Application Secret:** `steno-prod/application` (JWT secret, encryption key)
+- **Cost:** ~$0.40/secret/month = ~$2/month
+
+### 6. IAM Roles
+- **Backend Role:** `steno-prod-backend-role`
+  - ARN: `arn:aws:iam::971422717446:role/steno-prod-backend-role`
+  - Permissions: Secrets Manager, S3, Bedrock, CloudWatch
+- **App Runner Access Role:** `steno-prod-apprunner-service-role`
+  - ARN: `arn:aws:iam::971422717446:role/steno-prod-apprunner-service-role`
+  - Permissions: ECR pull
+
+### 7. ECR Repository
+- **Repository:** `steno-prod-backend`
+- **URI:** `971422717446.dkr.ecr.us-east-1.amazonaws.com/steno-prod-backend`
+- **Latest Image:** `sha256:14832c1c52a85e6edfadaf9d8922207d41036a535a84f4c6e40040a22a251681`
+- **Lifecycle Policy:** Keep last 10 images
+- **Cost:** ~$0.10/GB/month
+
 ---
 
-**Deployment Progress:** 4/10 complete (40%)
+**Deployment Progress:** 5/10 complete (50%)
 
