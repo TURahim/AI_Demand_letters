@@ -1,0 +1,15 @@
+{
+  "VpcId": "vpc-0b5ff75842342f527",
+  "VpcName": "stenoai-dev-vpc",
+  "VpcCidr": "10.0.0.0/16",
+  "PrivateSubnet1Id": "subnet-0fd1ae4a15040a502",
+  "PrivateSubnet1Name": "stenoai-dev-subnet-private-1",
+  "PrivateSubnet1Az": "us-east-1a",
+  "PrivateSubnet2Id": "subnet-0454ed18175d192cd",
+  "PrivateSubnet2Name": "stenoai-dev-subnet-private-2",
+  "PrivateSubnet2Az": "us-east-1b",
+  "Region": "us-east-1",
+  "Reused": true,
+  "Note": "Reusing existing VPC - no new VPC creation needed"
+}
+
