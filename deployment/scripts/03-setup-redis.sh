@@ -13,14 +13,17 @@ echo "Region: $REGION"
 echo ""
 
 # Load VPC configuration
-if [ ! -f "../config/vpc-config.json" ]; then
-    echo "❌ VPC config not found. Please ensure VPC is configured."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/config"
+
+if [ ! -f "$CONFIG_DIR/vpc-config.json" ]; then
+    echo "❌ VPC config not found at: $CONFIG_DIR/vpc-config.json"
     exit 1
 fi
 
-VPC_ID=$(jq -r '.VpcId' ../config/vpc-config.json)
-PRIVATE_SUBNET_1=$(jq -r '.PrivateSubnet1Id' ../config/vpc-config.json)
-PRIVATE_SUBNET_2=$(jq -r '.PrivateSubnet2Id' ../config/vpc-config.json)
+VPC_ID=$(jq -r '.VpcId' "$CONFIG_DIR/vpc-config.json")
+PRIVATE_SUBNET_1=$(jq -r '.PrivateSubnet1Id' "$CONFIG_DIR/vpc-config.json")
+PRIVATE_SUBNET_2=$(jq -r '.PrivateSubnet2Id' "$CONFIG_DIR/vpc-config.json")
 
 echo "Using VPC: $VPC_ID"
 echo "Private Subnets: $PRIVATE_SUBNET_1, $PRIVATE_SUBNET_2"
@@ -138,7 +141,7 @@ if [ $? -eq 0 ]; then
     echo ""
     
     # Save configuration
-    cat > ../config/redis-config.json <<EOF
+    cat > "$CONFIG_DIR/redis-config.json" <<EOF
 {
   "ClusterId": "$REDIS_CLUSTER_ID",
   "Endpoint": "$REDIS_ENDPOINT",
@@ -151,7 +154,7 @@ if [ $? -eq 0 ]; then
 }
 EOF
     
-    echo "💾 Configuration saved to: ../config/redis-config.json"
+    echo "💾 Configuration saved to: $CONFIG_DIR/redis-config.json"
     echo ""
     echo "Environment variables for backend:"
     echo "REDIS_HOST=$REDIS_ENDPOINT"

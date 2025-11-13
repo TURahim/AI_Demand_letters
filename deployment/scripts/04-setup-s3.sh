@@ -149,8 +149,13 @@ for bucket in $DOCS_BUCKET $EXPORTS_BUCKET; do
       --region $REGION
 done
 
+# Determine script directory for config path
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/config"
+mkdir -p "$CONFIG_DIR"
+
 # Save configuration
-cat > ../config/s3-config.json <<EOF
+cat > "$CONFIG_DIR/s3-config.json" <<EOF
 {
   "DocsBucket": "$DOCS_BUCKET",
   "ExportsBucket": "$EXPORTS_BUCKET",
@@ -167,7 +172,7 @@ echo "📊 Bucket Details:"
 echo "  Documents: s3://$DOCS_BUCKET"
 echo "  Exports: s3://$EXPORTS_BUCKET"
 echo ""
-echo "💾 Configuration saved to: ../config/s3-config.json"
+echo "💾 Configuration saved to: $CONFIG_DIR/s3-config.json"
 echo ""
 echo "Environment variables for backend:"
 echo "S3_BUCKET_NAME=$DOCS_BUCKET"
