@@ -3,58 +3,55 @@ FROM node:18-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
-
 # Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN npm ci --only=production --ignore-scripts
 
 # Generate Prisma Client
-RUN pnpm prisma generate
+RUN npx prisma generate
 
 # Build stage
 FROM base AS builder
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
-
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/prisma ./prisma
 
+# Copy package files and tsconfig
+COPY package.json package-lock.json* tsconfig.json ./
+
+# Install all dependencies (including dev dependencies for build)
+RUN npm install
+
 # Copy source code
-COPY . .
+COPY src ./src
 
 # Build application
-RUN pnpm build
+RUN npm run build
 
 # Production stage
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+RUN apk add --no-cache openssl
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
 
-# Install pnpm (needed for production dependencies)
-RUN npm install -g pnpm
-
 # Copy necessary files
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/pnpm-lock.yaml* ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./
 
 # Change ownership
 RUN chown -R nodejs:nodejs /app

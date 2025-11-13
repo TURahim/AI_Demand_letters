@@ -1,0 +1,11 @@
+{
+  "BackendRole": {
+    "Name": "steno-prod-backend-role",
+    "ARN": "arn:aws:iam::971422717446:role/steno-prod-backend-role"
+  },
+  "AppRunnerAccessRole": {
+    "Name": "steno-prod-apprunner-service-role",
+    "ARN": "arn:aws:iam::971422717446:role/steno-prod-apprunner-service-role"
+  },
+  "Region": "us-east-1"
+}

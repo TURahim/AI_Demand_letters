@@ -17,6 +17,5 @@ tests
 *.spec.ts
 .prettierrc
 .eslintrc
-tsconfig.json
 nodemon.json
 
