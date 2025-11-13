@@ -1,0 +1,13 @@
+{
+  "DBInstanceId": "steno-prod-db",
+  "Endpoint": "steno-prod-db.crws0amqe1e3.us-east-1.rds.amazonaws.com",
+  "Port": 5432,
+  "Database": "steno_prod",
+  "Username": "steno_admin",
+  "Password": "dY4peiWkOwEh4bc2jVVtUWfkT",
+  "SecurityGroupId": "sg-088fcf2f142405cab",
+  "SubnetGroup": "steno-prod-db-subnet-group",
+  "InstanceClass": "db.t3.micro",
+  "MultiAZ": false,
+  "Region": "us-east-1"
+}

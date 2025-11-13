@@ -100,13 +100,14 @@ echo "  Multi-AZ: $MULTI_AZ"
 echo "  Storage: ${ALLOCATED_STORAGE}GB"
 echo ""
 
-aws rds create-db-instance \
+# Build the RDS create command
+RDS_CMD="aws rds create-db-instance \
   --db-instance-identifier $DB_INSTANCE_ID \
   --db-instance-class $DB_INSTANCE_CLASS \
   --engine postgres \
-  --engine-version 15.5 \
+  --engine-version 15.14 \
   --master-username $DB_USERNAME \
-  --master-user-password "$DB_PASSWORD" \
+  --master-user-password \"$DB_PASSWORD\" \
   --allocated-storage $ALLOCATED_STORAGE \
   --storage-type gp3 \
   --storage-encrypted \
@@ -114,14 +115,23 @@ aws rds create-db-instance \
   --vpc-security-group-ids $RDS_SG \
   --db-name $DB_NAME \
   --backup-retention-period 7 \
-  --preferred-backup-window "03:00-04:00" \
-  --preferred-maintenance-window "mon:04:00-mon:05:00" \
-  --multi-az \
-  --publicly-accessible false \
-  --enable-cloudwatch-logs-exports '["postgresql"]' \
-  --deletion-protection \
-  --tags "Key=Name,Value=$DB_INSTANCE_ID" "Key=Project,Value=steno" "Key=Environment,Value=production" \
-  --region $REGION
+  --preferred-backup-window \"03:00-04:00\" \
+  --preferred-maintenance-window \"mon:04:00-mon:05:00\" \
+  --no-publicly-accessible \
+  --enable-cloudwatch-logs-exports postgresql \
+  --no-deletion-protection \
+  --tags \"Key=Name,Value=$DB_INSTANCE_ID\" \"Key=Project,Value=steno\" \"Key=Environment,Value=production\" \
+  --region $REGION"
+
+# Add multi-az flag conditionally
+if [ "$MULTI_AZ" = "true" ]; then
+    RDS_CMD="$RDS_CMD --multi-az"
+else
+    RDS_CMD="$RDS_CMD --no-multi-az"
+fi
+
+# Execute the command
+eval $RDS_CMD
 
 if [ $? -eq 0 ]; then
     echo ""

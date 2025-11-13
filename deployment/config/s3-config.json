@@ -1,0 +1,7 @@
+{
+  "DocsBucket": "steno-prod-docs-971422717446",
+  "ExportsBucket": "steno-prod-exports-971422717446",
+  "Region": "us-east-1",
+  "DocsUrl": "https://steno-prod-docs-971422717446.s3.us-east-1.amazonaws.com",
+  "ExportsUrl": "https://steno-prod-exports-971422717446.s3.us-east-1.amazonaws.com"
+}

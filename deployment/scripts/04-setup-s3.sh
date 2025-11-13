@@ -20,10 +20,17 @@ EXPORTS_BUCKET="$PROJECT_NAME-exports-$ACCOUNT_ID"
 
 # Create Documents Bucket
 echo "📁 Creating documents bucket..."
-aws s3api create-bucket \
-  --bucket $DOCS_BUCKET \
-  --region $REGION \
-  --create-bucket-configuration LocationConstraint=$REGION 2>/dev/null || echo "Bucket may already exist"
+if [ "$REGION" = "us-east-1" ]; then
+  # us-east-1 doesn't use LocationConstraint
+  aws s3api create-bucket \
+    --bucket $DOCS_BUCKET \
+    --region $REGION 2>/dev/null || echo "Bucket may already exist"
+else
+  aws s3api create-bucket \
+    --bucket $DOCS_BUCKET \
+    --region $REGION \
+    --create-bucket-configuration LocationConstraint=$REGION 2>/dev/null || echo "Bucket may already exist"
+fi
 
 # Enable versioning
 aws s3api put-bucket-versioning \
@@ -69,8 +76,9 @@ aws s3api put-bucket-lifecycle-configuration \
   --bucket $DOCS_BUCKET \
   --lifecycle-configuration '{
     "Rules": [{
-      "Id": "MoveToIA",
+      "ID": "MoveToIA",
       "Status": "Enabled",
+      "Filter": {},
       "Transitions": [{
         "Days": 90,
         "StorageClass": "STANDARD_IA"
@@ -87,10 +95,17 @@ echo "✅ Documents bucket created: $DOCS_BUCKET"
 
 # Create Exports Bucket
 echo "📁 Creating exports bucket..."
-aws s3api create-bucket \
-  --bucket $EXPORTS_BUCKET \
-  --region $REGION \
-  --create-bucket-configuration LocationConstraint=$REGION 2>/dev/null || echo "Bucket may already exist"
+if [ "$REGION" = "us-east-1" ]; then
+  # us-east-1 doesn't use LocationConstraint
+  aws s3api create-bucket \
+    --bucket $EXPORTS_BUCKET \
+    --region $REGION 2>/dev/null || echo "Bucket may already exist"
+else
+  aws s3api create-bucket \
+    --bucket $EXPORTS_BUCKET \
+    --region $REGION \
+    --create-bucket-configuration LocationConstraint=$REGION 2>/dev/null || echo "Bucket may already exist"
+fi
 
 # Enable encryption
 aws s3api put-bucket-encryption \
@@ -130,8 +145,9 @@ aws s3api put-bucket-lifecycle-configuration \
   --bucket $EXPORTS_BUCKET \
   --lifecycle-configuration '{
     "Rules": [{
-      "Id": "DeleteOldExports",
+      "ID": "DeleteOldExports",
       "Status": "Enabled",
+      "Filter": {},
       "Expiration": {
         "Days": 30
       }
