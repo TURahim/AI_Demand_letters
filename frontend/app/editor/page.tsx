@@ -62,7 +62,7 @@ function EditorContent() {
     )
   }
 
-  return <DocumentViewer letterId={letterId} letter={data.letter} />
+  return <DocumentViewer letterId={letterId} letter={data.letter} onRefresh={fetchLetter} />
 }
 
 export default function EditorPage() {

@@ -13,19 +13,20 @@ import { DocumentToolbar } from './document-toolbar'
 import { AIRefinementPanel } from './ai-refinement-panel'
 import { CommentsSidebar } from './comments-sidebar'
 import { ExportDialog } from '@/components/export/export-dialog'
-import { FileText, Upload } from 'lucide-react'
+import { FileText, Upload, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface DocumentViewerProps {
   letterId: string
   letter: Letter
   currentUserId?: string
+  onRefresh?: () => Promise<any>
 }
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 type ViewMode = 'edit' | 'preview'
 
-export function DocumentViewer({ letterId, letter: initialLetter, currentUserId }: DocumentViewerProps) {
+export function DocumentViewer({ letterId, letter: initialLetter, currentUserId, onRefresh }: DocumentViewerProps) {
   const [content, setContent] = useState<string>(
     typeof initialLetter.content === 'string'
       ? initialLetter.content
@@ -37,8 +38,10 @@ export function DocumentViewer({ letterId, letter: initialLetter, currentUserId 
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [showComments, setShowComments] = useState(true)
   const [showRefinement, setShowRefinement] = useState(true)
+  const [isGenerating, setIsGenerating] = useState(initialLetter.status === 'PENDING')
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const pollingTimerRef = useRef<NodeJS.Timeout | null>(null)
   const lastSavedContentRef = useRef<string>(content)
   const lastSavedTitleRef = useRef<string>(title)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -56,9 +59,55 @@ export function DocumentViewer({ letterId, letter: initialLetter, currentUserId 
         : initialLetter.content?.body || ''
     setContent(letterContent)
     setTitle(initialLetter.title)
+    setIsGenerating(initialLetter.status === 'PENDING')
     lastSavedContentRef.current = letterContent
     lastSavedTitleRef.current = initialLetter.title
   }, [initialLetter])
+
+  // Polling effect for when letter is being generated
+  useEffect(() => {
+    if (!isGenerating || !onRefresh) {
+      if (pollingTimerRef.current) {
+        clearTimeout(pollingTimerRef.current)
+      }
+      return
+    }
+
+    const pollForUpdates = async () => {
+      try {
+        const result = await onRefresh()
+        if (result?.letter) {
+          const letter = result.letter
+          setIsGenerating(letter.status === 'PENDING')
+          
+          // Update content if it has been generated
+          if (letter.content && letter.status !== 'PENDING') {
+            const newContent = typeof letter.content === 'string'
+              ? letter.content
+              : letter.content?.body || ''
+            if (newContent !== content) {
+              setContent(newContent)
+              lastSavedContentRef.current = newContent
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for letter updates:', error)
+      }
+
+      // Continue polling if still generating
+      pollingTimerRef.current = setTimeout(pollForUpdates, 2000)
+    }
+
+    // Start polling
+    pollingTimerRef.current = setTimeout(pollForUpdates, 2000)
+
+    return () => {
+      if (pollingTimerRef.current) {
+        clearTimeout(pollingTimerRef.current)
+      }
+    }
+  }, [isGenerating, onRefresh, content])
 
   // Auto-save effect
   useEffect(() => {
@@ -132,6 +181,40 @@ export function DocumentViewer({ letterId, letter: initialLetter, currentUserId 
 
   // Split content into paragraphs for better presentation
   const contentParagraphs = content.split('\n\n').filter(p => p.trim())
+
+  // Show loading state if letter is being generated
+  if (isGenerating) {
+    return (
+      <div className="h-screen flex flex-col bg-[#FAFAF8]">
+        <DocumentToolbar
+          title={title}
+          saveStatus={saveStatus}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onSave={handleSave}
+          onExport={() => setShowExportDialog(true)}
+          onSend={() => toast.info('Send feature coming soon')}
+          onToggleComments={() => setShowComments(!showComments)}
+          showComments={showComments}
+          isSaving={isSaving}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto px-6">
+            <Loader2 className="w-12 h-12 animate-spin text-[#A18050] mx-auto mb-6" />
+            <h2 className="text-2xl font-bold mb-3 text-foreground" style={{ fontFamily: 'Editor, serif' }}>
+              Generating Your Letter
+            </h2>
+            <p className="text-muted-foreground mb-2" style={{ fontFamily: 'Apercu, system-ui, sans-serif' }}>
+              Our AI is crafting your demand letter. This may take a few moments.
+            </p>
+            <p className="text-xs text-muted-foreground/60" style={{ fontFamily: 'Apercu, system-ui, sans-serif' }}>
+              You can leave this page and come back later.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen flex flex-col bg-[#FAFAF8]">
