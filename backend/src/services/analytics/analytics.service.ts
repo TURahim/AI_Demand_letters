@@ -201,6 +201,13 @@ class AnalyticsService {
     const action = log.action.toLowerCase();
     const resource = log.resource.toLowerCase();
 
+    // Auth-specific actions
+    if (action.includes('auth.login')) return 'Signed in';
+    if (action.includes('auth.logout')) return 'Signed out';
+    if (action.includes('auth.register')) return 'Created an account';
+    if (action.includes('auth.password_reset')) return 'Reset password';
+
+    // General actions
     if (action.includes('create')) return `Created a ${resource}`;
     if (action.includes('update')) return `Updated a ${resource}`;
     if (action.includes('delete')) return `Deleted a ${resource}`;
