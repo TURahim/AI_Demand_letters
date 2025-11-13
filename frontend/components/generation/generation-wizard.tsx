@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, CheckCircle2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { generationApi } from '@/src/api/generation.api'
 import { templatesApi } from '@/src/api/templates.api'
 import { documentsApi } from '@/src/api/documents.api'
+import { lettersApi } from '@/src/api/letters.api'
 import { useApi, useMutation } from '@/src/hooks/useApi'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -23,6 +24,9 @@ export function GenerationWizard() {
   const [step, setStep] = useState(1)
   const [generating, setGenerating] = useState(false)
   const [jobId, setJobId] = useState<string | null>(null)
+  const [generatingLetterId, setGeneratingLetterId] = useState<string | null>(null)
+  const [generationProgress, setGenerationProgress] = useState<string>('Initializing...')
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load templates and documents
   const fetchTemplates = useCallback(() => templatesApi.listTemplates(), [])
@@ -82,6 +86,44 @@ export function GenerationWizard() {
     }))
   }
 
+  const pollLetterStatus = async (letterId: string) => {
+    try {
+      const result = await lettersApi.getLetter(letterId)
+      if (result.status === 'success' && result.data?.letter) {
+        const letter = result.data.letter
+        
+        // Check if letter has content and is no longer pending
+        if (letter.status !== 'PENDING' && letter.content) {
+          const hasContent = typeof letter.content === 'string' 
+            ? letter.content.trim().length > 0 
+            : letter.content?.body?.trim().length > 0
+          
+          if (hasContent) {
+            // Letter is ready!
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current)
+            }
+            setGenerationProgress('Letter generated successfully!')
+            toast.success('Your demand letter is ready!')
+            
+            // Small delay for the success message, then navigate
+            setTimeout(() => {
+              router.push(`/editor?letterId=${letterId}`)
+            }, 1000)
+            return true
+          }
+        }
+        
+        // Still generating - update progress message
+        setGenerationProgress('AI is crafting your demand letter...')
+      }
+      return false
+    } catch (error) {
+      console.error('Error polling letter status:', error)
+      return false
+    }
+  }
+
   const handleGenerate = async () => {
     if (!formData.caseType || !formData.incidentDescription || !formData.clientName || !formData.defendantName) {
       toast.error('Please fill in all required fields')
@@ -89,6 +131,7 @@ export function GenerationWizard() {
     }
 
     setGenerating(true)
+    setGenerationProgress('Starting generation...')
 
     const damages: any = {}
     if (formData.medical) damages.medical = parseFloat(formData.medical)
@@ -114,11 +157,16 @@ export function GenerationWizard() {
 
     if (result.success && result.data) {
       setJobId(result.data.jobId)
-      toast.success('Letter generation started!')
-      // Poll for status or redirect to editor
-      setTimeout(() => {
-        router.push(`/editor?letterId=${result.data.letterId}`)
-      }, 2000)
+      setGeneratingLetterId(result.data.letterId)
+      setGenerationProgress('AI is analyzing your case details...')
+      
+      // Start polling for letter completion
+      pollingIntervalRef.current = setInterval(async () => {
+        await pollLetterStatus(result.data.letterId)
+      }, 2000) // Poll every 2 seconds
+      
+      // Also check immediately
+      await pollLetterStatus(result.data.letterId)
     } else {
       const validationMessages =
         result.errors?.length
@@ -141,6 +189,15 @@ export function GenerationWizard() {
       setGenerating(false)
     }
   }
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+      }
+    }
+  }, [])
 
   const renderStep = () => {
     switch (step) {
@@ -401,7 +458,7 @@ export function GenerationWizard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
       {/* Progress Indicator */}
       <div className="flex items-center justify-between">
         {[1, 2, 3, 4].map((s) => (
@@ -442,6 +499,32 @@ export function GenerationWizard() {
               <ArrowRight className="w-4 h-4" />
             </Button>
           )}
+        </div>
+      )}
+
+      {/* Loading Overlay - Shows while generating */}
+      {generating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <Card className="p-8 max-w-md w-full mx-4 border-2 border-border shadow-2xl">
+            <div className="text-center space-y-6">
+              <div className="relative">
+                <Loader2 className="w-16 h-16 animate-spin text-[#A18050] mx-auto" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'Editor, serif' }}>
+                  Generating Your Letter
+                </h2>
+                <p className="text-muted-foreground" style={{ fontFamily: 'Apercu, system-ui, sans-serif' }}>
+                  {generationProgress}
+                </p>
+              </div>
+              <div className="pt-4 border-t border-border">
+                <p className="text-xs text-muted-foreground/60">
+                  This may take 10-30 seconds. Please don't close this page.
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
     </div>
