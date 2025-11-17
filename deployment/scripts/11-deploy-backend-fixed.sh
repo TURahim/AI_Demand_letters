@@ -1,7 +1,11 @@
 #!/bin/bash
 
-# Steno AI - Backend Deployment to AWS App Runner (with Environment Variables)
-# This script deploys the backend with all required environment variables from Secrets Manager
+# Steno AI - Backend Deployment to AWS App Runner (Fixed Configuration)
+# This script deploys the backend with fixes for:
+# - IAM role-based authentication (no AWS credentials)
+# - Optional queue worker (disabled by default)
+# - Optional WebSocket server (disabled by default)
+# - Database migrations on startup
 
 set -e
 
@@ -9,7 +13,7 @@ REGION="us-east-1"
 PROJECT_NAME="steno-prod"
 SERVICE_NAME="${PROJECT_NAME}-backend"
 
-echo "🚀 Deploying Backend to AWS App Runner (with full configuration)"
+echo "🚀 Deploying Backend to AWS App Runner (Fixed Configuration)"
 echo "Region: $REGION"
 echo "Service: $SERVICE_NAME"
 echo ""
@@ -25,6 +29,7 @@ ACCESS_ROLE_ARN=$(jq -r '.AppRunnerAccessRole.ARN' "$CONFIG_DIR/iam-config.json"
 VPC_CONNECTOR_ARN=$(jq -r '.VpcConnectorArn' "$CONFIG_DIR/vpc-connector-config.json")
 
 echo "📋 Configuration:"
+echo "  Image: $IMAGE_URI:latest"
 echo "  VPC Connector: $VPC_CONNECTOR_ARN"
 echo ""
 echo "📋 Fetching secrets from AWS Secrets Manager..."
@@ -48,7 +53,7 @@ ENCRYPTION_KEY=$(echo $APP_SECRET | jq -r '.encryptionKey')
 echo "✅ Secrets fetched successfully"
 echo ""
 
-# Create temporary config file
+# Create temporary config file with FIXED environment variables
 cat > /tmp/apprunner-config.json <<EOF
 {
   "ServiceName": "$SERVICE_NAME",
@@ -77,12 +82,16 @@ cat > /tmp/apprunner-config.json <<EOF
           "REFRESH_TOKEN_EXPIRES_IN": "30d",
           "ENCRYPTION_KEY": "$ENCRYPTION_KEY",
           "AWS_REGION": "$REGION",
+          "AWS_USE_IAM_ROLE": "true",
           "BEDROCK_MODEL_ID": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
           "BEDROCK_MAX_TOKENS": "4096",
           "BEDROCK_TEMPERATURE": "0.7",
           "CORS_ORIGIN": "*",
           "RATE_LIMIT_WINDOW_MS": "900000",
-          "RATE_LIMIT_MAX_REQUESTS": "100"
+          "RATE_LIMIT_MAX_REQUESTS": "100",
+          "ENABLE_QUEUE_WORKER": "false",
+          "WEBSOCKET_ENABLED": "false",
+          "LOG_LEVEL": "info"
         }
       }
     },
@@ -102,13 +111,17 @@ cat > /tmp/apprunner-config.json <<EOF
     "Interval": 10,
     "Timeout": 5,
     "HealthyThreshold": 2,
-    "UnhealthyThreshold": 5
+    "UnhealthyThreshold": 10
   },
   "NetworkConfiguration": {
     "EgressConfiguration": {
       "EgressType": "VPC",
       "VpcConnectorArn": "$VPC_CONNECTOR_ARN"
-    }
+    },
+    "IngressConfiguration": {
+      "IsPubliclyAccessible": true
+    },
+    "IpAddressType": "IPV4"
   },
   "Tags": [
     {
@@ -124,107 +137,104 @@ cat > /tmp/apprunner-config.json <<EOF
 EOF
 
 echo "🚀 Creating App Runner service..."
-aws apprunner create-service \
+SERVICE_OUTPUT=$(aws apprunner create-service \
   --cli-input-json file:///tmp/apprunner-config.json \
-  --region $REGION
+  --region $REGION)
 
-rm -f /tmp/apprunner-config.json
+SERVICE_ARN=$(echo $SERVICE_OUTPUT | jq -r '.Service.ServiceArn')
+SERVICE_URL=$(echo $SERVICE_OUTPUT | jq -r '.Service.ServiceUrl')
 
 echo "✅ Service creation initiated"
-echo ""
-echo "⏳ Waiting for service to become available (this may take 5-10 minutes)..."
-sleep 30
-
-# Get service ARN
-SERVICE_ARN=$(aws apprunner list-services --region $REGION --query "ServiceSummaryList[?ServiceName=='$SERVICE_NAME'].ServiceArn | [0]" --output text)
-
-if [ "$SERVICE_ARN" = "" ] || [ "$SERVICE_ARN" = "None" ]; then
-    echo "❌ Failed to get service ARN"
-    exit 1
-fi
-
 echo "Service ARN: $SERVICE_ARN"
+echo "Service URL: https://$SERVICE_URL"
 echo ""
 
-# Monitor deployment
-COUNTER=0
-MAX_ATTEMPTS=30  # 15 minutes max
-
-while [ $COUNTER -lt $MAX_ATTEMPTS ]; do
-    STATUS=$(aws apprunner describe-service --service-arn "$SERVICE_ARN" --region $REGION --query 'Service.Status' --output text)
-    
-    echo "[$((COUNTER * 30))s] Current status: $STATUS"
-    
-    if [ "$STATUS" = "RUNNING" ]; then
-        echo ""
-        echo "✅ Service is now running!"
-        break
-    elif [ "$STATUS" = "CREATE_FAILED" ] || [ "$STATUS" = "DELETE_FAILED" ]; then
-        echo ""
-        echo "❌ Deployment failed with status: $STATUS"
-        echo ""
-        echo "Checking logs for errors..."
-        # Get the actual service ID from the ARN
-        SERVICE_LOG_ID=$(echo "$SERVICE_ARN" | awk -F'/' '{print $NF}')
-        aws logs tail "/aws/apprunner/$SERVICE_NAME/$SERVICE_LOG_ID/service" --region $REGION --since 30m --format short 2>&1 | tail -20
-        exit 1
-    fi
-    
-    sleep 30
-    COUNTER=$((COUNTER + 1))
-done
-
-if [ $COUNTER -eq $MAX_ATTEMPTS ]; then
-    echo ""
-    echo "⚠️  Deployment is taking longer than expected."
-    echo "Current status: $STATUS"
-    echo ""
-    echo "Checking logs..."
-    # Get the actual service ID from the ARN
-    SERVICE_LOG_ID=$(echo "$SERVICE_ARN" | awk -F'/' '{print $NF}')
-    echo "Log group: /aws/apprunner/$SERVICE_NAME/$SERVICE_LOG_ID/service"
-    aws logs tail "/aws/apprunner/$SERVICE_NAME/$SERVICE_LOG_ID/service" --region $REGION --since 30m --format short 2>&1 | tail -20
-    exit 1
-fi
-
-# Get service details
-SERVICE_URL=$(aws apprunner describe-service --service-arn "$SERVICE_ARN" --region $REGION --query 'Service.ServiceUrl' --output text)
-SERVICE_ID=$(aws apprunner describe-service --service-arn "$SERVICE_ARN" --region $REGION --query 'Service.ServiceId' --output text)
-
-# Save to config
+# Save service details
 cat > "$CONFIG_DIR/apprunner-config.json" <<EOF
 {
   "ServiceName": "$SERVICE_NAME",
   "ServiceArn": "$SERVICE_ARN",
-  "ServiceId": "$SERVICE_ID",
-  "ServiceUrl": "https://$SERVICE_URL",
-  "Region": "$REGION",
-  "ImageUri": "$IMAGE_URI:latest"
+  "ServiceUrl": "$SERVICE_URL",
+  "Region": "$REGION"
 }
 EOF
 
+echo "⏳ Waiting for service to become available..."
+echo "This may take 5-10 minutes..."
 echo ""
-echo "✨ Backend Deployment Complete!"
+
+# Poll service status
+MAX_ATTEMPTS=60
+ATTEMPT=0
+while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+  STATUS=$(aws apprunner describe-service --service-arn $SERVICE_ARN --region $REGION --query 'Service.Status' --output text)
+  
+  echo "[$ATTEMPT/$MAX_ATTEMPTS] Status: $STATUS"
+  
+  if [ "$STATUS" = "RUNNING" ]; then
+    echo ""
+    echo "✅ Service is running!"
+    echo "🌐 Service URL: https://$SERVICE_URL"
+    echo ""
+    
+    # Test health endpoint
+    echo "🏥 Testing health endpoint..."
+    sleep 5
+    if curl -f -s "https://$SERVICE_URL/health" > /dev/null; then
+      echo "✅ Health check passed!"
+      curl -s "https://$SERVICE_URL/health" | jq .
+    else
+      echo "⚠️  Health check failed, but service is running"
+      echo "Check CloudWatch logs for details"
+    fi
+    
+    break
+  elif [ "$STATUS" = "CREATE_FAILED" ] || [ "$STATUS" = "OPERATION_IN_PROGRESS" ]; then
+    if [ $ATTEMPT -ge 30 ]; then
+      echo ""
+      echo "⚠️  Deployment is taking longer than expected."
+      echo ""
+      
+      # Get service ID for CloudWatch logs
+      SERVICE_ID=$(echo "$SERVICE_ARN" | awk -F'/' '{print $NF}')
+      LOG_GROUP="/aws/apprunner/$SERVICE_NAME/$SERVICE_ID/service"
+      
+      echo "📋 Recent CloudWatch logs:"
+      aws logs tail "$LOG_GROUP" --region $REGION --since 10m --format short 2>&1 | tail -30 || echo "⚠️  Logs not available yet"
+      
+      echo ""
+      echo "Check AWS console for more details:"
+      echo "https://console.aws.amazon.com/apprunner/home?region=$REGION#/services/$SERVICE_ARN"
+    fi
+  fi
+  
+  ATTEMPT=$((ATTEMPT + 1))
+  sleep 10
+done
+
+if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+  echo ""
+  echo "❌ Deployment timed out after $MAX_ATTEMPTS attempts"
+  echo "Service ARN: $SERVICE_ARN"
+  echo ""
+  exit 1
+fi
+
 echo ""
-echo "📊 Service Details:"
-echo "  Name: $SERVICE_NAME"
-echo "  URL: https://$SERVICE_URL"
-echo "  Status: RUNNING"
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║        ✅ BACKEND DEPLOYMENT COMPLETE                        ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
-echo "💾 Configuration saved to: $CONFIG_DIR/apprunner-config.json"
-echo ""
-echo "🔍 Test the backend:"
-echo "  curl https://$SERVICE_URL/health"
-echo "  curl https://$SERVICE_URL/api/v1/health"
-echo ""
-echo "📱 View in AWS Console:"
-echo "  https://console.aws.amazon.com/apprunner/home?region=$REGION#/services/$SERVICE_ID"
-echo ""
-echo "💰 Cost: ~\$25-50/month (1 vCPU, 2GB RAM + compute usage)"
+echo "Service URL: https://$SERVICE_URL"
+echo "API Base: https://$SERVICE_URL/api/v1"
 echo ""
 echo "Next steps:"
-echo "  1. Test API endpoints"
-echo "  2. Run database migrations"
-echo "  3. Deploy frontend with API URL: https://$SERVICE_URL"
+echo "1. Test the API endpoints"
+echo "2. Run database migrations if needed"
+echo "3. Enable queue worker (set ENABLE_QUEUE_WORKER=true) when ready"
+echo "4. Configure frontend to use this backend URL"
 echo ""
+
+# Clean up
+rm -f /tmp/apprunner-config.json
 

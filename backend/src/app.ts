@@ -63,6 +63,8 @@ app.get('/health', (_req, res) => {
   });
 });
 
+console.log('✓ Health endpoint registered at /health');
+
 // ============================================
 // API Routes
 // ============================================

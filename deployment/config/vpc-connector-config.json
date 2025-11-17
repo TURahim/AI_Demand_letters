@@ -1,0 +1,6 @@
+{
+  "VpcConnectorName": "steno-prod-vpc-connector",
+  "VpcConnectorArn": "arn:aws:apprunner:us-east-1:971422717446:vpcconnector/steno-prod-vpc-connector/1/2092b79550e8418488bc62ebbe98d19c",
+  "AppRunnerSecurityGroup": "sg-04f4621044673ebb6",
+  "Region": "us-east-1"
+}

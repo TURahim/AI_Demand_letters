@@ -1,8 +1,11 @@
 import dotenv from 'dotenv';
-import path from 'path';
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Load environment variables from .env file ONLY in development
+// In production (App Runner, ECS, etc.), environment variables are injected directly
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+  console.log('✓ Loaded environment variables from .env file (development mode)');
+}
 
 interface Config {
   // Server
@@ -108,6 +111,7 @@ interface Config {
 
   // WebSocket
   websocket: {
+    enabled: boolean;
     port: number;
     corsOrigin: string;
   };
@@ -119,6 +123,8 @@ interface Config {
     analytics: boolean;
   };
 }
+
+const websocketEnabledEnv = process.env.WEBSOCKET_ENABLED;
 
 const config: Config = {
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -207,6 +213,10 @@ const config: Config = {
   },
 
   websocket: {
+    enabled:
+      websocketEnabledEnv !== undefined
+        ? websocketEnabledEnv === 'true'
+        : process.env.NODE_ENV !== 'production',
     port: parseInt(process.env.WEBSOCKET_PORT || '3002', 10),
     corsOrigin: process.env.WEBSOCKET_CORS_ORIGIN || 'http://localhost:3000',
   },
@@ -230,9 +240,27 @@ function validateConfig() {
     if (config.jwt.secret === 'dev-secret-change-me') {
       errors.push('JWT_SECRET must be set in production');
     }
-    if (!config.aws.accessKeyId || !config.aws.secretAccessKey) {
-      errors.push('AWS credentials are required in production');
+
+    // AWS Credentials validation - support IAM role mode
+    const accessKey = config.aws.accessKeyId;
+    const secretKey = config.aws.secretAccessKey;
+    const noKeysProvided = !accessKey && !secretKey;
+    const partialKeys = (!!accessKey && !secretKey) || (!accessKey && !!secretKey);
+
+    if (partialKeys) {
+      errors.push(
+        'Both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be provided together. ' +
+        'Provide both keys OR omit both to use IAM role.'
+      );
     }
+
+    // If no keys provided, assume IAM role mode (App Runner, ECS, EC2 with instance profile)
+    if (noKeysProvided) {
+      console.log('✓ Using AWS IAM role for credentials (no static keys provided)');
+    } else {
+      console.log('✓ Using static AWS credentials from environment variables');
+    }
+
     if (!config.s3.bucketName) {
       errors.push('S3_BUCKET_NAME is required in production');
     }
@@ -245,7 +273,25 @@ function validateConfig() {
 
 // Run validation
 if (process.env.NODE_ENV !== 'test') {
+  // Log startup configuration
+  console.log('═══════════════════════════════════════════════════════');
+  console.log('🚀 Starting Steno Backend');
+  console.log('═══════════════════════════════════════════════════════');
+  console.log('NODE_ENV:', config.nodeEnv);
+  console.log('PORT:', config.port);
+  console.log('API_VERSION:', config.apiVersion);
+  console.log('Database URL configured:', !!config.databaseUrl);
+  console.log('Redis Host:', config.redis.host);
+  console.log('S3 Bucket:', config.s3.bucketName || '(not configured)');
+  console.log('AWS Region:', config.aws.region);
+  console.log('WebSocket enabled:', config.websocket.enabled);
+  console.log('Queue Worker:', process.env.ENABLE_QUEUE_WORKER || 'auto');
+  console.log('═══════════════════════════════════════════════════════');
+  
   validateConfig();
+  
+  console.log('✅ Configuration validated successfully');
+  console.log('');
 }
 
 export default config;

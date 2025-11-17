@@ -1,0 +1,15 @@
+{
+  "VpcConnectorName": "steno-prod-vpc-connector",
+  "VpcConnectorArn": "arn:aws:apprunner:us-east-1:971422717446:vpcconnector/steno-prod-vpc-connector/1/2092b79550e8418488bc62ebbe98d19c",
+  "VpcConnectorRevision": 1,
+  "Subnets": [
+    "subnet-0454ed18175d192cd",
+    "subnet-0fd1ae4a15040a502"
+  ],
+  "SecurityGroups": [
+    "sg-04f4621044673ebb6"
+  ],
+  "VpcId": "vpc-0b5ff75842342f527",
+  "Status": "ACTIVE",
+  "Region": "us-east-1"
+}

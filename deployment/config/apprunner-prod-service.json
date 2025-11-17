@@ -1,0 +1,8 @@
+{
+  "ServiceName": "steno-prod-backend",
+  "ServiceArn": "arn:aws:apprunner:us-east-1:971422717446:service/steno-prod-backend/d09a081ba603401db1854504f462c347",
+  "ServiceUrl": "2fbqmx4dkk.us-east-1.awsapprunner.com",
+  "Region": "us-east-1",
+  "VpcConnectorArn": "arn:aws:apprunner:us-east-1:971422717446:vpcconnector/steno-prod-vpc-connector/1/2092b79550e8418488bc62ebbe98d19c",
+  "VpcId": "vpc-0b5ff75842342f527"
+}

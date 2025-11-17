@@ -1,0 +1,6 @@
+{
+  "ServiceName": "steno-prod-backend-fixed",
+  "ServiceArn": "arn:aws:apprunner:us-east-1:971422717446:service/steno-prod-backend-fixed/274d125371da4715a04bc3bf50e4cdf5",
+  "ServiceUrl": "mfmdyxp3pm.us-east-1.awsapprunner.com",
+  "Region": "us-east-1"
+}
