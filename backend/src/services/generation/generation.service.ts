@@ -91,13 +91,12 @@ export async function startLetterGeneration(input: {
       templateId: input.templateId,
       title: input.title || `Demand Letter - ${input.defendantName}`,
       content: { body: '' }, // Will be filled by generation job
-      status: 'DRAFT', // Start as DRAFT, worker will update to IN_REVIEW when done
       recipientName: input.recipientName || input.defendantName,
       recipientAddress: input.recipientAddress || defendantAddress,
       caseReference: input.caseReference,
       metadata: {
         caseType: input.caseType,
-        generationStatus: 'pending',
+        generationStatus: 'pending', // Worker will update to 'completed' or 'failed'
         generationStarted: new Date().toISOString(),
       },
     });
