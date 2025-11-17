@@ -10,8 +10,8 @@ import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { generationApi } from '@/src/api/generation.api'
-import { templatesApi } from '@/src/api/templates.api'
-import { documentsApi } from '@/src/api/documents.api'
+import { templatesApi, Template } from '@/src/api/templates.api'
+import { documentsApi, Document } from '@/src/api/documents.api'
 import { lettersApi } from '@/src/api/letters.api'
 import { useApi, useMutation } from '@/src/hooks/useApi'
 import { toast } from 'sonner'
@@ -27,6 +27,7 @@ export function GenerationWizard() {
   const [generatingLetterId, setGeneratingLetterId] = useState<string | null>(null)
   const [generationProgress, setGenerationProgress] = useState<string>('Initializing...')
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load templates and documents
   const fetchTemplates = useCallback(() => templatesApi.listTemplates(), [])
@@ -86,44 +87,111 @@ export function GenerationWizard() {
     }))
   }
 
-  const pollLetterStatus = async (letterId: string) => {
+  // Normalize backend generation status - supports any naming convention
+  const normalizeStatus = (metadata: any): string | null => {
+    return (
+      metadata?.generationStatus ||
+      metadata?.status ||
+      metadata?.state ||
+      metadata?.generation_state ||
+      metadata?.generation_status ||
+      null
+    )
+  }
+
+  const pollLetterStatus = async (letterId: string): Promise<boolean> => {
     try {
       const result = await lettersApi.getLetter(letterId)
       if (result.status === 'success' && result.data?.letter) {
         const letter = result.data.letter
         const metadata = (letter.metadata || {}) as any
         
-        // Check if generation is complete
-        if (metadata.generationStatus === 'completed' || metadata.generationStatus === 'failed') {
+        // Normalize status to handle any backend naming convention
+        const status = normalizeStatus(metadata)
+        
+        // Diagnostic logging
+        console.log('Polling letter:', {
+          letterId,
+          metadata,
+          status,
+          contentPreview: typeof letter.content === 'string'
+            ? letter.content.slice(0, 40)
+            : JSON.stringify(letter.content || {}).slice(0, 40),
+        })
+        
+        // Check if generation is complete (supports multiple status values)
+        if (status === 'completed' || status === 'done' || status === 'finished') {
+          // Clear all timers
           if (pollingIntervalRef.current) {
             clearInterval(pollingIntervalRef.current)
+            pollingIntervalRef.current = null
+          }
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
           }
           
-          if (metadata.generationStatus === 'failed') {
-            // Generation failed
-            const error = metadata.generationError || {}
-            const errorMessage = error.reason || error.title || 'Failed to generate letter'
-            toast.error(errorMessage, { duration: 8000 })
-            setGenerating(false)
-            return true
-          }
-          
-          // Check if letter has content
-          const hasContent = typeof letter.content === 'string' 
-            ? letter.content.trim().length > 0 
-            : letter.content?.body?.trim().length > 0
+          // Robust content detection
+          const hasContent = (() => {
+            if (!letter.content) return false
+
+            if (typeof letter.content === 'string') {
+              return letter.content.trim().length > 0
+            }
+
+            // For structured content formats
+            try {
+              const serialized = JSON.stringify(letter.content)
+              return serialized.trim().length > 2 // More than just "{}"
+            } catch (e) {
+              return false
+            }
+          })()
           
           if (hasContent) {
             // Letter is ready!
             setGenerationProgress('Letter generated successfully!')
             toast.success('Your demand letter is ready!')
             
-            // Small delay for the success message, then navigate
+            // Ensure router.push is always reached when content is ready
+            console.log('Navigating to editor...', letterId)
             setTimeout(() => {
+              if (!router) {
+                console.error('Router not available')
+                return
+              }
               router.push(`/editor?letterId=${letterId}`)
-            }, 1000)
+            }, 800)
+            
+            setGenerating(false)
+            return true
+          } else {
+            // Status says completed but no content - treat as error
+            console.warn('Generation marked complete but no content found')
+            toast.error('Letter generation completed but no content was generated. Please try again.', { duration: 8000 })
+            setGenerating(false)
             return true
           }
+        }
+        
+        // Check if generation failed (supports multiple failure status values)
+        if (status === 'failed' || status === 'error') {
+          // Clear all timers
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current)
+            pollingIntervalRef.current = null
+          }
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
+          }
+          
+          // Generation failed
+          const error = metadata.generationError || metadata.error || {}
+          const errorMessage = error.reason || error.title || error.message || 'Failed to generate letter'
+          toast.error(errorMessage, { duration: 8000 })
+          setGenerating(false)
+          return true
         }
         
         // Still generating - update progress message
@@ -172,13 +240,31 @@ export function GenerationWizard() {
       setGeneratingLetterId(result.data.letterId)
       setGenerationProgress('AI is analyzing your case details...')
       
+      // Set global timeout to prevent infinite loading (60 seconds)
+      timeoutRef.current = setTimeout(() => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current)
+          pollingIntervalRef.current = null
+        }
+        setGenerating(false)
+        toast.error('Letter generation timed out. Please try again.', { duration: 8000 })
+      }, 60000) // 60 seconds
+      
       // Start polling for letter completion
       pollingIntervalRef.current = setInterval(async () => {
-        await pollLetterStatus(result.data.letterId)
+        const isComplete = await pollLetterStatus(result.data.letterId)
+        if (isComplete) {
+          // Polling completed successfully - timers already cleared in pollLetterStatus
+          return
+        }
       }, 2000) // Poll every 2 seconds
       
       // Also check immediately
-      await pollLetterStatus(result.data.letterId)
+      const immediateComplete = await pollLetterStatus(result.data.letterId)
+      if (immediateComplete) {
+        // Already complete - timers already cleared in pollLetterStatus
+        return
+      }
     } else {
       const validationMessages =
         result.errors?.length
@@ -199,14 +285,29 @@ export function GenerationWizard() {
       console.error('Generation error:', result)
       toast.error(errorMsg, { duration: 6000 })
       setGenerating(false)
+      
+      // Clear any timers on error
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
     }
   }
 
-  // Cleanup polling on unmount
+  // Cleanup polling and timeout on unmount
   useEffect(() => {
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
       }
     }
   }, [])
@@ -363,7 +464,7 @@ export function GenerationWizard() {
                 {documentsData?.documents?.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No documents uploaded yet</p>
                 ) : (
-                  documentsData?.documents?.map((doc) => (
+                  documentsData?.documents?.map((doc: Document) => (
                     <div key={doc.id} className="flex items-center space-x-2">
                       <Checkbox
                         checked={formData.documentIds.includes(doc.id)}
@@ -389,7 +490,7 @@ export function GenerationWizard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NO_TEMPLATE_VALUE}>None - Use default</SelectItem>
-                  {templatesData?.templates?.map((template) => (
+                  {templatesData?.templates?.map((template: Template) => (
                     <SelectItem key={template.id} value={template.id}>
                       {template.name}
                     </SelectItem>
