@@ -58,6 +58,9 @@ COPY --from=deps /app/prisma ./prisma
 # Copy compiled JavaScript from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy prompt templates (not compiled by TypeScript)
+COPY --from=builder /app/src/services/ai/prompts ./dist/services/ai/prompts
+
 # Copy package.json for npm scripts
 COPY --from=builder /app/package.json ./package.json
 
