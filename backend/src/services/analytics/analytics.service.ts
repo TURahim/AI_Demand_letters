@@ -109,7 +109,7 @@ class AnalyticsService {
       ] = await Promise.all([
         prisma.document.count({ where: { firmId } }),
         prisma.letter.count({ where: { firmId } }),
-        prisma.template.count({ where: { firmId, isPublic: false } }),
+        prisma.template.count({ where: { firmId } }),
         prisma.user.count({
           where: {
             firmId,

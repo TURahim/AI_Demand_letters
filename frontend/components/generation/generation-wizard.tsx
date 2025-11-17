@@ -91,18 +91,30 @@ export function GenerationWizard() {
       const result = await lettersApi.getLetter(letterId)
       if (result.status === 'success' && result.data?.letter) {
         const letter = result.data.letter
+        const metadata = (letter.metadata || {}) as any
         
-        // Check if letter has content and is no longer pending
-        if (letter.status !== 'PENDING' && letter.content) {
+        // Check if generation is complete
+        if (metadata.generationStatus === 'completed' || metadata.generationStatus === 'failed') {
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current)
+          }
+          
+          if (metadata.generationStatus === 'failed') {
+            // Generation failed
+            const error = metadata.generationError || {}
+            const errorMessage = error.reason || error.title || 'Failed to generate letter'
+            toast.error(errorMessage, { duration: 8000 })
+            setGenerating(false)
+            return true
+          }
+          
+          // Check if letter has content
           const hasContent = typeof letter.content === 'string' 
             ? letter.content.trim().length > 0 
             : letter.content?.body?.trim().length > 0
           
           if (hasContent) {
             // Letter is ready!
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current)
-            }
             setGenerationProgress('Letter generated successfully!')
             toast.success('Your demand letter is ready!')
             

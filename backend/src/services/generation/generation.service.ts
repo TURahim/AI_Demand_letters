@@ -81,7 +81,7 @@ export async function startLetterGeneration(input: {
       }
     }
 
-    // Create letter record in PENDING status
+    // Create letter record with DRAFT status and pending generation metadata
     const defendantAddress = input.defendantAddress || 'Address not provided';
     const damages = input.damages || {};
 
@@ -91,6 +91,7 @@ export async function startLetterGeneration(input: {
       templateId: input.templateId,
       title: input.title || `Demand Letter - ${input.defendantName}`,
       content: { body: '' }, // Will be filled by generation job
+      status: 'DRAFT', // Start as DRAFT, worker will update to IN_REVIEW when done
       recipientName: input.recipientName || input.defendantName,
       recipientAddress: input.recipientAddress || defendantAddress,
       caseReference: input.caseReference,

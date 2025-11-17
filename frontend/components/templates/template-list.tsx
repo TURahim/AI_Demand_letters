@@ -14,8 +14,15 @@ import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { TemplateEditor } from '@/components/templates/template-editor'
 
+function parseCategoryTags(category?: string) {
+  return category
+    ?.split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean) ?? []
+}
+
 export function TemplateList() {
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [showEditor, setShowEditor] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -27,7 +34,9 @@ export function TemplateList() {
   const { data, loading, execute } = useApi(fetchTemplates, { immediate: true })
 
   const { mutate: deleteTemplate } = useMutation(templatesApi.deleteTemplate)
-  const { mutate: cloneTemplate } = useMutation(templatesApi.cloneTemplate)
+  const { mutate: cloneTemplate } = useMutation(
+    ({ id, name }: { id: string; name: string }) => templatesApi.cloneTemplate(id, name)
+  )
 
   const templates = data?.templates || []
 
@@ -46,7 +55,7 @@ export function TemplateList() {
   }
 
   const handleClone = async (id: string, name: string) => {
-    const result = await cloneTemplate(id, `${name} (Copy)`)
+    const result = await cloneTemplate({ id, name: `${name} (Copy)` })
     if (result.success) {
       toast.success('Template cloned successfully')
       execute()
@@ -61,14 +70,16 @@ export function TemplateList() {
   }
 
   const handleEdit = (id: string) => {
-    setSelectedTemplate(id)
+    const template = templates.find((t: Template) => t.id === id) || null
+    setSelectedTemplate(template)
     setShowEditor(true)
   }
 
   if (showEditor) {
     return (
       <TemplateEditor
-        templateId={selectedTemplate}
+        templateId={selectedTemplate?.id}
+        initialTemplate={selectedTemplate}
         onClose={() => {
           setShowEditor(false)
           setSelectedTemplate(null)
@@ -121,66 +132,84 @@ export function TemplateList() {
         </Empty>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map((template) => (
-            <Card key={template.id} className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base truncate">{template.name}</CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      {template.isPublic && (
-                        <Badge variant="outline" className="text-xs">
-                          Public
-                        </Badge>
-                      )}
-                      {template.category && (
-                        <Badge variant="outline" className="text-xs">
-                          {template.category}
-                        </Badge>
-                      )}
+          {templates.map((template: Template) => {
+            const categoryTags = parseCategoryTags(template.category)
+
+            return (
+              <Card
+                key={template.id}
+                className="cursor-pointer hover:shadow-md transition-shadow flex flex-col h-full min-w-0 overflow-hidden"
+              >
+                <CardHeader className="flex-shrink-0">
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="flex-1 min-w-0 pr-2">
+                      <CardTitle className="text-base font-semibold mb-2 line-clamp-2 break-words overflow-hidden min-w-0 truncate">
+                        {template.name}
+                      </CardTitle>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2 min-w-0">
+                        {template.isPublic && (
+                          <Badge variant="outline" className="text-xs max-w-[150px] truncate whitespace-normal">
+                            Public
+                          </Badge>
+                        )}
+                        {categoryTags.map((tag, index) => (
+                          <Badge
+                            key={`${template.id}-category-${index}`}
+                            variant="outline"
+                            className="text-xs max-w-[150px] truncate whitespace-normal"
+                            title={tag}
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
+                    <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
                   </div>
-                  <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col min-w-0">
+                  {template.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4 break-words overflow-hidden">
+                      {template.description}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 min-w-0">
+                    <span className="truncate min-w-0">{template.usageCount} uses</span>
+                    <span className="shrink-0 ml-2">{new Date(template.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </CardContent>
+                <div className="px-6 pb-6 pt-2 flex gap-2 shrink border-t border-border min-w-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 min-w-0"
+                    onClick={() => handleEdit(template.id)}
+                  >
+                    <Edit className="w-4 h-4 mr-1.5 shrink-0" />
+                    <span className="truncate">Edit</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink min-w-0"
+                    onClick={() => handleClone(template.id, template.name)}
+                    title="Clone template"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="shrink min-w-0"
+                    onClick={() => handleDelete(template.id)}
+                    title="Delete template"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {template.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                    {template.description}
-                  </p>
-                )}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{template.usageCount} uses</span>
-                  <span>{new Date(template.createdAt).toLocaleDateString()}</span>
-                </div>
-              </CardContent>
-              <div className="px-6 pb-6 flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleEdit(template.id)}
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleClone(template.id, template.name)}
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDelete(template.id)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            )
+          })}
         </div>
       )}
     </div>
