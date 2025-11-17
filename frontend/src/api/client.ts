@@ -1,6 +1,9 @@
 /**
  * API Client Configuration
  * Handles all HTTP requests to the backend API
+ * 
+ * Configure via environment variable:
+ * - NEXT_PUBLIC_API_URL: Backend base URL (e.g., http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com)
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';

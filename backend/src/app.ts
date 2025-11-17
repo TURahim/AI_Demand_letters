@@ -31,6 +31,8 @@ app.use(helmet());
 app.use(
   cors({
     origin: config.cors.origin,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: config.cors.credentials,
   })
 );
