@@ -17,7 +17,11 @@ interface UploadingFile {
   error?: string
 }
 
-export function DocumentUpload() {
+interface DocumentUploadProps {
+  onUploadComplete?: () => void
+}
+
+export function DocumentUpload({ onUploadComplete }: DocumentUploadProps) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragActive, setDragActive] = useState(false)
@@ -133,6 +137,7 @@ export function DocumentUpload() {
           setTimeout(() => {
             setUploadingFiles((prev) => prev.filter((f) => f.id !== uploadId))
             router.refresh() // Refresh to show in document list
+            onUploadComplete?.() // Call callback to close modal if provided
           }, 2000)
         } else {
           throw new Error(completeResponse.message || 'Failed to complete upload')

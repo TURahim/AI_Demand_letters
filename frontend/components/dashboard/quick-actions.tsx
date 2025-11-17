@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { PenTool, FileStack, Upload } from "lucide-react"
+import { PenTool, FileStack, FileText } from "lucide-react"
 
 export function QuickActions() {
   return (
@@ -20,10 +20,10 @@ export function QuickActions() {
             Manage Templates
           </Button>
         </Link>
-        <Link href="/upload">
+        <Link href="/documents">
           <Button variant="outline" className="w-full gap-2 bg-transparent">
-            <Upload className="w-4 h-4" />
-            Upload Docs
+            <FileText className="w-4 h-4" />
+            View Documents
           </Button>
         </Link>
       </div>

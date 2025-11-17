@@ -3,12 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { FileText, Upload, FileStack, PenTool, BarChart3, Settings } from "lucide-react"
+import { FileText, FileStack, PenTool, BarChart3, Settings, Mail } from "lucide-react"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/documents", label: "Documents", icon: FileText },
-  { href: "/upload", label: "Upload", icon: Upload },
+  { href: "/letters", label: "Letters", icon: Mail },
   { href: "/templates", label: "Templates", icon: FileStack },
   { href: "/generation", label: "Generate Letter", icon: PenTool },
 ]
