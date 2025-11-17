@@ -81,6 +81,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:3001/health || exit 1
 
 # Start application
-# Simplified startup - just run the server
-# Migrations should be run separately via a one-time job or manually
-CMD ["node", "dist/server.js"]
+# Ensure database schema is up to date before starting the server.
+# This is safe to run on every deploy because `prisma migrate deploy`
+# only applies pending migrations and is a no-op when schema is current.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]

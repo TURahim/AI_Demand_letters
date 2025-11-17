@@ -9,14 +9,14 @@
 - **Frontend**: Next.js deployed on Vercel  
   → https://ai-demand-letters.vercel.app
 
-- **Backend**: Node.js/Express deployed on Elastic Beanstalk  
-  → http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com
+- **Backend**: Node.js/Express deployed on Elastic Beanstalk (production VPC)  
+  → https://d1comazpq780af.cloudfront.net (CloudFront HTTPS proxy for `steno-prod-backend-vpc`)
 
 ---
 
 ## Environment Variables to Configure
 
-### 1. Elastic Beanstalk Environment (`steno-prod-backend-env`)
+### 1. Elastic Beanstalk Environment (`steno-prod-backend-vpc`)
 
 Set the following environment variable to allow CORS requests from the Vercel frontend:
 
@@ -27,14 +27,14 @@ CORS_ORIGIN=https://ai-demand-letters.vercel.app
 **How to set it**:
 ```bash
 aws elasticbeanstalk update-environment \
-  --environment-name steno-prod-backend-env \
+  --environment-name steno-prod-backend-vpc \
   --option-settings \
     Namespace=aws:elasticbeanstalk:application:environment,OptionName=CORS_ORIGIN,Value=https://ai-demand-letters.vercel.app \
   --region us-east-1
 ```
 
 Or via AWS Console:
-1. Go to Elastic Beanstalk → `steno-prod-backend-env`
+1. Go to Elastic Beanstalk → `steno-prod-backend-vpc`
 2. Configuration → Software → Environment properties
 3. Add: `CORS_ORIGIN` = `https://ai-demand-letters.vercel.app`
 4. Click "Apply"
@@ -54,10 +54,10 @@ These should already be set (verify they exist):
 
 ### 2. Vercel Project (Frontend)
 
-Set the following environment variable to point the frontend API client to the EB backend:
+Set the following environment variable to point the frontend API client to the HTTPS CloudFront URL:
 
 ```bash
-NEXT_PUBLIC_API_URL=http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com
+NEXT_PUBLIC_API_URL=https://d1comazpq780af.cloudfront.net
 ```
 
 **How to set it**:
@@ -65,7 +65,7 @@ NEXT_PUBLIC_API_URL=http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elastic
 Via Vercel CLI:
 ```bash
 vercel env add NEXT_PUBLIC_API_URL
-# When prompted, paste: http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com
+# When prompted, paste: https://d1comazpq780af.cloudfront.net
 # Select: Production, Preview, Development (all environments)
 ```
 
@@ -75,7 +75,7 @@ Or via Vercel Dashboard:
 3. Settings → Environment Variables
 4. Add:
    - **Key**: `NEXT_PUBLIC_API_URL`
-   - **Value**: `http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com`
+   - **Value**: `https://d1comazpq780af.cloudfront.net`
    - **Environments**: Production, Preview, Development
 5. Click "Save"
 
@@ -87,17 +87,11 @@ Or via Vercel Dashboard:
 
 1. **Set the `CORS_ORIGIN` environment variable** in Elastic Beanstalk (see above).
 
-2. **Redeploy the backend**:
-   - If using EB CLI:
-     ```bash
-     cd backend
-     eb deploy steno-prod-backend-env --region us-east-1
-     ```
-   - Or wait for the environment to restart after env var change (~2-5 minutes).
+2. **Redeploy the backend** (or trigger an environment restart) so the updated Dockerfile runs Prisma migrations automatically.
 
-3. **Verify backend is running**:
+3. **Verify backend is running (via CloudFront)**:
    ```bash
-   curl http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com/health
+   curl https://d1comazpq780af.cloudfront.net/health
    ```
    Expected response:
    ```json
@@ -131,14 +125,14 @@ Once both environments are redeployed:
 
 ### ✅ Test 1: Backend Health Check
 ```bash
-curl http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com/health
+curl https://d1comazpq780af.cloudfront.net/health
 ```
 - Expected: `200 OK` with JSON response
 - Expected: `{"status":"healthy",...}`
 
 ### ✅ Test 2: Backend API Root
 ```bash
-curl http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com/api/v1
+curl https://d1comazpq780af.cloudfront.net/api/v1
 ```
 - Expected: `200 OK` 
 - Expected: `{"message":"Steno API","version":"v1","environment":"production"}`
@@ -153,7 +147,7 @@ curl http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com/a
 3. Go to **Network** tab
 4. Trigger an API call (e.g., try to log in, load documents, or any feature that hits the backend)
 5. **Verify**:
-   - ✅ Request URL starts with `http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com`
+   - ✅ Request URL starts with `https://d1comazpq780af.cloudfront.net`
    - ✅ Response status is `200 OK` (or appropriate status for the endpoint)
    - ✅ **No CORS errors** in Console (no messages like "has been blocked by CORS policy")
    - ✅ Response headers include:
@@ -175,7 +169,7 @@ curl http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com/a
 
 **Symptoms**:
 ```
-Access to fetch at 'http://steno-prod-backend-env...' from origin 'https://ai-demand-letters.vercel.app' 
+Access to fetch at 'https://d1comazpq780af.cloudfront.net/...' from origin 'https://ai-demand-letters.vercel.app' 
 has been blocked by CORS policy
 ```
 
@@ -183,7 +177,7 @@ has been blocked by CORS policy
 1. Verify `CORS_ORIGIN` is set in EB environment:
    ```bash
    aws elasticbeanstalk describe-configuration-settings \
-     --environment-name steno-prod-backend-env \
+     --environment-name steno-prod-backend-vpc \
      --region us-east-1 \
      --query 'ConfigurationSettings[0].OptionSettings[?OptionName==`CORS_ORIGIN`]'
    ```
@@ -220,7 +214,7 @@ has been blocked by CORS policy
 **Solutions**:
 1. Check EB application logs:
    ```bash
-   aws logs tail /aws/elasticbeanstalk/steno-prod-backend-env/var/log/eb-engine.log \
+   aws logs tail /aws/elasticbeanstalk/steno-prod-backend-vpc/var/log/eb-engine.log \
      --region us-east-1 \
      --follow
    ```
@@ -235,7 +229,7 @@ has been blocked by CORS policy
 ### Check EB Environment Status
 ```bash
 aws elasticbeanstalk describe-environments \
-  --environment-names steno-prod-backend-env \
+  --environment-names steno-prod-backend-vpc \
   --region us-east-1 \
   --query 'Environments[0].[Status,Health,HealthStatus]'
 ```
@@ -243,7 +237,7 @@ aws elasticbeanstalk describe-environments \
 ### View EB Environment Variables
 ```bash
 aws elasticbeanstalk describe-configuration-settings \
-  --environment-name steno-prod-backend-env \
+  --environment-name steno-prod-backend-vpc \
   --region us-east-1 \
   --query 'ConfigurationSettings[0].OptionSettings[?Namespace==`aws:elasticbeanstalk:application:environment`]'
 ```
@@ -251,17 +245,17 @@ aws elasticbeanstalk describe-configuration-settings \
 ### Test Backend from Command Line
 ```bash
 # Health check
-curl -i http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com/health
+curl -i https://d1comazpq780af.cloudfront.net/health
 
 # API root
-curl -i http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com/api/v1
+curl -i https://d1comazpq780af.cloudfront.net/api/v1
 
 # Test CORS preflight
 curl -i -X OPTIONS \
   -H "Origin: https://ai-demand-letters.vercel.app" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: Content-Type,Authorization" \
-  http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com/api/v1/auth/login
+  https://d1comazpq780af.cloudfront.net/api/v1/auth/login
 ```
 
 ### Check Vercel Deployment Status

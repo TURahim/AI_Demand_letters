@@ -1,0 +1,23 @@
+[
+  {"Namespace":"aws:ec2:vpc","OptionName":"VPCId","Value":"vpc-0b5ff75842342f527"},
+  {"Namespace":"aws:ec2:vpc","OptionName":"Subnets","Value":"subnet-0fd1ae4a15040a502,subnet-0454ed18175d192cd"},
+  {"Namespace":"aws:ec2:vpc","OptionName":"ELBSubnets","Value":"subnet-0d49a3d5e922be7be,subnet-07d397d5e58d74d1b"},
+  {"Namespace":"aws:ec2:vpc","OptionName":"ELBScheme","Value":"public"},
+  {"Namespace":"aws:autoscaling:launchconfiguration","OptionName":"SecurityGroups","Value":"sg-0cc060f2894d1c174"},
+  {"Namespace":"aws:autoscaling:launchconfiguration","OptionName":"IamInstanceProfile","Value":"aws-elasticbeanstalk-ec2-role"},
+  {"Namespace":"aws:elbv2:loadbalancer","OptionName":"SecurityGroups","Value":"sg-0f6f191f4a71f53f8"},
+  {"Namespace":"aws:elasticbeanstalk:environment","OptionName":"ServiceRole","Value":"aws-elasticbeanstalk-service-role"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"REDIS_HOST","Value":"steno-prod-redis.ggng2r.0001.use1.cache.amazonaws.com"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"REDIS_PORT","Value":"6379"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"DATABASE_URL","Value":"postgresql://steno_admin:dY4peiWkOwEh4bc2jVVtUWfkT@steno-prod-db.crws0amqe1e3.us-east-1.rds.amazonaws.com:5432/steno_prod?schema=public"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"JWT_SECRET","Value":"OpTQXDqmIAf2yuZvyLr5oszfgjdeVF0pAf0y9pwdDghXZt7wb6M2aUovP1h24iM73VGhBujtpuD5p1hu8XQ"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"REFRESH_TOKEN_SECRET","Value":"OpTQXDqmIAf2yuZvyLr5oszfgjdeVF0pAf0y9pwdDghXZt7wb6M2aUovP1h24iM73VGhBujtpuD5p1hu8XQ"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"ENCRYPTION_KEY","Value":"7UIrpMbUr1VHSmGhHnycpppF0vXPpQXx"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"S3_BUCKET_NAME","Value":"steno-prod-docs-971422717446"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"S3_EXPORTS_BUCKET","Value":"steno-prod-exports-971422717446"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"AWS_REGION","Value":"us-east-1"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"API_VERSION","Value":"v1"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"PORT","Value":"3001"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"NODE_ENV","Value":"production"},
+  {"Namespace":"aws:elasticbeanstalk:application:environment","OptionName":"CORS_ORIGIN","Value":"https://ai-demand-letters.vercel.app"}
+]

@@ -24,6 +24,9 @@ import analyticsRoutes from './services/analytics/analytics.routes';
 // Create Express app
 const app: Application = express();
 
+// Trust reverse proxy (ELB/CloudFront) so rate limiting and IP tracking work
+app.set('trust proxy', 1);
+
 // ============================================
 // Security Middleware
 // ============================================

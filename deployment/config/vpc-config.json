@@ -1,15 +1,15 @@
 {
   "VpcId": "vpc-0b5ff75842342f527",
-  "VpcName": "stenoai-dev-vpc",
-  "VpcCidr": "10.0.0.0/16",
+  "InternetGatewayId": "igw-0b4a5e73288a287e6",
+  "NatGatewayId": "nat-078c2e1ba9aa2371b",
+  "PublicSubnet1Id": "subnet-0d49a3d5e922be7be",
+  "PublicSubnet2Id": "subnet-07d397d5e58d74d1b",
   "PrivateSubnet1Id": "subnet-0fd1ae4a15040a502",
-  "PrivateSubnet1Name": "stenoai-dev-subnet-private-1",
-  "PrivateSubnet1Az": "us-east-1a",
   "PrivateSubnet2Id": "subnet-0454ed18175d192cd",
-  "PrivateSubnet2Name": "stenoai-dev-subnet-private-2",
-  "PrivateSubnet2Az": "us-east-1b",
-  "Region": "us-east-1",
-  "Reused": true,
-  "Note": "Reusing existing VPC - no new VPC creation needed"
+  "PublicRouteTableId": "rtb-09e0c959e5839df72",
+  "AlbSecurityGroupId": "sg-0f6f191f4a71f53f8",
+  "AppSecurityGroupId": "",
+  "RdsSecurityGroupId": "",
+  "RedisSecurityGroupId": "",
+  "Region": "us-east-1"
 }
-

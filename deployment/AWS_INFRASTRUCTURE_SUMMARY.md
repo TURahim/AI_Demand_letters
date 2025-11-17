@@ -25,12 +25,11 @@
 | `subnet-0fd1ae4a15040a502` | `stenoai-dev-subnet-private-1` | `us-east-1a` | `10.0.1.0/24` | No |
 | `subnet-0454ed18175d192cd` | `stenoai-dev-subnet-private-2` | `us-east-1b` | `10.0.2.0/24` | No |
 
-### Public Subnets (Elastic Beanstalk Load Balancer)
+### Public Subnets (Elastic Beanstalk Load Balancer / NAT)
 | Subnet ID | Name | AZ | CIDR | Auto-assign Public IP |
 |-----------|------|----|----- |----------------------|
-| `subnet-09f3119b50b6eff2f` | _(unnamed)_ | `us-east-1a` | `10.0.0.0/24` | Yes |
-
-**Note**: Only one public subnet currently exists. For EB ALB high availability, we should create a second public subnet in `us-east-1b`.
+| `subnet-0d49a3d5e922be7be` | `steno-prod-public-1` | `us-east-1a` | `10.0.101.0/24` | Yes |
+| `subnet-07d397d5e58d74d1b` | `steno-prod-public-2` | `us-east-1b` | `10.0.102.0/24` | Yes |
 
 ---
 
@@ -41,7 +40,8 @@
 | `sg-088fcf2f142405cab` | `steno-prod-rds-sg` | RDS PostgreSQL access | RDS instance |
 | `sg-05d5e9142ab4ecdb8` | `steno-prod-redis-sg` | Redis access | ElastiCache |
 | `sg-04f4621044673ebb6` | `steno-prod-apprunner-sg` | App Runner VPC Connector | App Runner |
-| `sg-0cc060f2894d1c174` | `steno-eb-backend-sg` | Elastic Beanstalk instances | EB environment |
+| `sg-0cc060f2894d1c174` | `steno-eb-backend-sg` | Elastic Beanstalk instances | EB environments |
+| `sg-0f6f191f4a71f53f8` | `steno-prod-alb-sg` | Elastic Beanstalk ALB | EB load balancer |
 | `sg-0617a5fcc3de041c8` | `stenoai-dev-sg-rds` | (Legacy RDS SG) | N/A |
 | `sg-019dace16d1d8a403` | `stenoai-dev-sg-lambda` | Lambda functions | Lambda |
 
@@ -56,9 +56,7 @@
 #### Redis Security Group (`sg-05d5e9142ab4ecdb8`)
 **Ingress (Redis port 6379)**:
 - From App Runner SG: `sg-04f4621044673ebb6` ✅
-- From VPC CIDR: `10.0.0.0/16` ✅
-
-**Action Required**: Add ingress rule for EB Backend SG to access Redis.
+- From VPC CIDR: `10.0.0.0/16` ✅ (covers EB instances)
 
 ---
 
@@ -104,17 +102,24 @@
 
 ## 🚀 Current Deployments
 
-### Elastic Beanstalk (Production)
+### Elastic Beanstalk (Production - VPC)
 - **Application**: `steno-prod-backend`
-- **Environment**: `steno-prod-backend-env`
-- **URL**: `http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com`
+- **Environment**: `steno-prod-backend-vpc`
+- **URL**: `http://steno-prod-backend-vpc.eba-exhpmgyi.us-east-1.elasticbeanstalk.com`
+- **HTTPS**: `https://d1comazpq780af.cloudfront.net` (CloudFront proxy)
 - **Status**: ✅ Running (Green health)
 - **Platform**: Docker on Amazon Linux 2
 - **VPC**: `vpc-0b5ff75842342f527`
-- **Subnets**: Uses public subnet `subnet-09f3119b50b6eff2f` for ALB
-- **Security Group**: `sg-0cc060f2894d1c174`
-- **Version**: `app-251116_122311973122-stage-251116_122311973145`
-- **Deployed**: November 16, 2025
+- **Subnets**: Private (`subnet-0fd1ae4a15040a502`, `subnet-0454ed18175d192cd`), Public (`subnet-0d49a3d5e922be7be`, `subnet-07d397d5e58d74d1b`) for ALB/NAT
+- **Instance Security Group**: `sg-0cc060f2894d1c174`
+- **ALB Security Group**: `sg-0f6f191f4a71f53f8`
+- **Current Version**: `vpc-migrate-20251116224320`
+- **Deployed**: November 17, 2025
+
+### Elastic Beanstalk (Legacy - Public Internet)
+- **Environment**: `steno-prod-backend-env`
+- **Status**: ✅ Running but outside production VPC (cannot reach RDS/Redis)
+- **Note**: Keep until VPC-backed environment is fully verified, then terminate.
 
 ### AWS App Runner (Alternative/Legacy)
 - **Service**: `steno-backend-v3`
@@ -189,12 +194,12 @@ Located in `deployment/scripts/`:
 9. **S3 Buckets**: Production buckets already exist ✅
 
 ### Action Items Before Full EB Deployment
-1. ✅ **Create second public subnet** in `us-east-1b` (CIDR: `10.0.101.0/24` or similar)
-2. ✅ **Add EB SG to Redis ingress rules** (`sg-0cc060f2894d1c174` → `sg-05d5e9142ab4ecdb8` on port 6379)
-3. ⏳ **Update backend CORS_ORIGIN** to include EB URL
-4. ⏳ **Configure EB environment variables** (DATABASE_URL, REDIS_HOST, etc.)
+1. ✅ **Create second public subnet** in `us-east-1b` (completed by script `01b-add-public-subnets.sh`)
+2. ✅ **Allow EB instances to access Redis** (covered via VPC CIDR + App Runner SG)
+3. ✅ **Update backend CORS_ORIGIN** to include Vercel origin
+4. ✅ **Configure EB environment variables** (DATABASE_URL, REDIS_HOST, etc.)
 5. ⏳ **Set up CloudWatch alarms** for EB environment health
-6. ⏳ **Update DNS/frontend** to point to new EB endpoint
+6. ✅ **Expose HTTPS endpoint** via CloudFront (`https://d1comazpq780af.cloudfront.net`)
 
 ---
 

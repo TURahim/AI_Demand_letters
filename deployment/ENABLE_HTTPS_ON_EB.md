@@ -17,6 +17,15 @@ The EB environment already has an Application Load Balancer. We just need to:
 
 ---
 
+## Current Status (Nov 17, 2025)
+
+- ✅ HTTPS served via CloudFront distribution `d1comazpq780af.cloudfront.net`
+- ✅ Origin updated to `steno-prod-backend-vpc.eba-exhpmgyi.us-east-1.elasticbeanstalk.com`
+- ✅ Vercel frontend should point to `https://d1comazpq780af.cloudfront.net`
+- 🔄 If you later switch to a custom domain, follow Option A below and update the CloudFront distribution or ALB listeners accordingly.
+
+---
+
 ## Option A: Use AWS Certificate Manager (ACM) - Free + Auto-Renewal
 
 ### Prerequisites

@@ -51,6 +51,7 @@ pnpm-debug.log*
 .cache/
 tmp/
 temp/
+deployment/artifacts/
 *.pid
 *.seed
 *.pid.lock

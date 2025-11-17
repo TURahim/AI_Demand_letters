@@ -2,7 +2,7 @@
   "DistributionId": "E1XD5OH1NMZSY6",
   "CloudFrontDomain": "d1comazpq780af.cloudfront.net",
   "CloudFrontURL": "https://d1comazpq780af.cloudfront.net",
-  "OriginURL": "http://steno-prod-backend-env.eba-exhpmgyi.us-east-1.elasticbeanstalk.com",
-  "ConfiguredDate": "2025-11-17T04:03:23Z",
+  "OriginURL": "http://steno-prod-backend-vpc.eba-exhpmgyi.us-east-1.elasticbeanstalk.com",
+  "ConfiguredDate": "2025-11-17T04:48:10Z",
   "Region": "us-east-1"
 }
